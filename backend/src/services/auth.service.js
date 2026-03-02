@@ -14,9 +14,16 @@ import { pool } from "../config/db.js";
 
 // Login auth with email and password
 export async function loginService({ email, password }) {
-  // If no valid input
+  // If no input
   if (!email || !password) {
     const err = new Error("Email and password are required");
+    err.status = 400;
+    throw err;
+  }
+
+  // If no valid email input
+  if (!/^\S+@\S+\.\S+$/.test(email)) {
+    const err = new Error("Email format is invalid");
     err.status = 400;
     throw err;
   }
@@ -41,7 +48,7 @@ export async function loginService({ email, password }) {
 
   // If no user is found
   if (rows.length === 0) {
-    const err = new Error("Invalid user credentials");
+    const err = new Error("Invalid credentials");
     err.status = 401;
     throw err;
   }

@@ -1,0 +1,12 @@
+/* :root {
+  font-family: Inter, system-ui, Arial, sans-serif;
+} */
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  /* margin: 0; */
+  background: #f6f7fb;
+}

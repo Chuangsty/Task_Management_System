@@ -1,0 +1,40 @@
+.loginPage {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+}
+
+.loginPage__title {
+  font-size: 44px !important;
+  font-weight: 800 !important;
+  margin-bottom: 28px !important;
+}
+
+.loginPage__cardWrap {
+  display: flex;
+  justify-content: center;
+}
+
+.loginPage__card {
+  width: 560px;
+  max-width: 100%;
+}
+
+.loginPage__cardContent {
+  padding: 32px !important;
+}
+
+.loginPage__alert {
+  margin-bottom: 16px;
+}
+
+.loginPage__btnRow {
+  display: flex;
+  justify-content: center;
+  margin-top: 16px;
+}
+
+.loginPage__btn {
+  border-radius: 999px !important;
+  padding: 8px 18px !important;
+}
