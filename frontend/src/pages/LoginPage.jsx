@@ -19,8 +19,9 @@ export default function LoginPage() {
     setErrMsg("");
     setLoading(true);
     try {
-      await api.post("/api/auth/login", { email, password });
-      nav("/menu");
+      const response = await api.post("/api/auth/login", { email, password });
+      console.log(response.data);
+      nav("/users");
     } catch (err) {
       setErrMsg(err?.response?.data?.error || "Login failed");
     } finally {

@@ -1,0 +1,78 @@
+.usersPage__top {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.usersPage__title {
+  font-size: 26px !important;
+  font-weight: 900 !important;
+}
+
+.usersPage__alert {
+  margin-bottom: 12px;
+}
+
+/* table card */
+.usersCard {
+  padding: 16px;
+  border-radius: 16px !important;
+}
+
+.usersTopRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 12px;
+}
+
+.usersSearch {
+  width: 260px;
+}
+
+.usersLoading {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.usersHeaderRow {
+  background: #24364b;
+}
+
+.usersHeaderCell {
+  color: white !important;
+  font-weight: 900 !important;
+}
+
+.usersOnboardRow {
+  background: #f1f4f9;
+}
+
+.usersSelect {
+  min-width: 120px;
+}
+
+.usersSelect--wide {
+  min-width: 160px;
+}
+
+.usersAddBtn {
+  border-radius: 999px !important;
+}
+
+.statusChip {
+  font-weight: 800 !important;
+  border-radius: 999px !important;
+  color: white !important;
+}
+
+.statusChip--active {
+  background: #2e7d32 !important;
+}
+
+.statusChip--disabled {
+  background: #1f2a44 !important;
+}

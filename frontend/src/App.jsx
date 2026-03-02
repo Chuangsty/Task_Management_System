@@ -4,8 +4,7 @@ import { CssBaseline, ThemeProvider, createTheme } from "@mui/material";
 
 import LoginPage from "./pages/LoginPage.jsx";
 import HeaderBar from "./components/HeaderBar";
-import MainMenuPage from "./pages/MainMenuPage";
-// import UserManagementPage from "./pages/UserManagementPage";
+import UserManagementPage from "./pages/UserManagementPage.jsx";
 
 const theme = createTheme({
   typography: { fontFamily: "Inter, system-ui, Arial, sans-serif" },
@@ -19,8 +18,8 @@ export default function App() {
         <Route path="/" element={<Navigate to="/login" replace />} />
         <Route path="/login" element={<LoginPage />} />
 
-        <Route path="/menu" element={<HeaderBar />}>
-          <Route index element={<MainMenuPage />} />
+        <Route path="/users" element={<HeaderBar />}>
+          <Route index element={<UserManagementPage />} />
         </Route>
 
         <Route path="*" element={<Navigate to="/login" replace />} />
