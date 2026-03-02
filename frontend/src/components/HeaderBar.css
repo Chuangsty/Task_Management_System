@@ -1,0 +1,38 @@
+.headerBar {
+  min-height: 100vh;
+  background: #f6f7fb;
+}
+
+.headerBar__bar {
+  background: #666 !important;
+}
+
+.headerBar__toolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.headerBar__title {
+  font-weight: 800 !important;
+  letter-spacing: 0.2px;
+}
+
+.headerBar__right {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.headerBar__welcome {
+  font-weight: 600 !important;
+}
+
+.headerBar__avatar {
+  background: #c7b6ff !important;
+  color: #333 !important;
+}
+
+.headerBar__content {
+  padding: 24px 0;
+}

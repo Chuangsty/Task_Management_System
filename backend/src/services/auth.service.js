@@ -102,3 +102,39 @@ export async function loginService({ email, password }) {
     },
   };
 }
+
+// Get user infor with auth
+export async function getUserMeService(id) {
+  const [rows] = await pool.query(
+    `
+    SELECT 
+      u.id,
+      u.username,
+      u.email,
+      s.slug AS status,
+      GROUP_CONCAT(r.slug ORDER BY r.slug) AS roles
+    FROM users u
+    JOIN account_status s ON s.id = u.account_status_id
+    LEFT JOIN user_roles ur ON ur.user_id = u.id
+    LEFT JOIN roles r ON r.id = ur.role_id
+    WHERE u.id = ?
+    GROUP BY u.id, u.username, u.email, s.slug
+    `,
+    [id],
+  );
+
+  if (rows.length === 0) {
+    const err = new Error("User not found");
+    err.status = 404;
+    throw err;
+  }
+
+  const row = rows[0];
+  return {
+    id: row.id,
+    username: row.username,
+    email: row.email,
+    status: row.status,
+    roles: row.roles ? row.roles.split(",") : [],
+  };
+}

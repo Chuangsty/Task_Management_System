@@ -1,0 +1,26 @@
+.menuCard {
+  padding: 32px;
+  border-radius: 16px !important;
+}
+
+.menuCard__title {
+  font-size: 32px !important;
+  font-weight: 800 !important;
+  margin-bottom: 8px !important;
+}
+
+.menuCard__sub {
+  color: rgba(0, 0, 0, 0.6);
+  margin-bottom: 24px !important;
+}
+
+.menuCard__actions {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.menuCard__btn {
+  border-radius: 12px !important;
+  padding: 12px 18px !important;
+}

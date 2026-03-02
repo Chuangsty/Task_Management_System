@@ -1,4 +1,4 @@
-import { loginService } from "../services/auth.service.js";
+import { loginService, getUserMeService } from "../services/auth.service.js";
 
 // Controller: handles HTTP layer only
 export async function login(req, res, next) {
@@ -21,6 +21,19 @@ export async function login(req, res, next) {
     res.json({ user: result.user, message: "Logged in" });
 
     // res.json(result); // Frontend stores token in localStorage
+  } catch (err) {
+    next(err);
+  }
+}
+
+// GET /api/auth/me
+export async function meController(req, res, next) {
+  try {
+    // req.user is set by requireAuth after verifying cookie JWT
+    const UId = req.user.id;
+
+    const me = await getUserMeService(UId);
+    res.json({ user: me });
   } catch (err) {
     next(err);
   }
