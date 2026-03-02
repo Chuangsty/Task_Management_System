@@ -4,25 +4,17 @@ import { pool } from "../config/db.js";
 // Protect routes: requires valid bearer(whoever bears(carries) the token) & token
 export async function requireAuth(req, res, next) {
   try {
-    const header = req.headers.authorization || ""; // Reads the Authorization header
-    const [type, token] = header.split(" "); // Split header into type and token by space (" ")
+    // Backend stores JWT in cookie -----------------
+    const cookieName = process.env.JWT_COOKIE_NAME || "token";
+    const token = req.cookies?.[cookieName];
 
-    if (type !== "Bearer" || !token) {
-      const err = new Error("Missing or invalid Authorization header");
-      err.status = 401;
-      throw err;
-    }
-
-    // Verify token signature + expiry (token & JWT_SECRET) for all actions below
-    let jwtData;
-    try {
-      jwtData = jwt.verify(token, process.env.JWT_SECRET); // verify for jwt (signature validation if token signed with server's secret key & token expiration)
-    } catch (e) {
-      // Normalize JWT errors: malformed / invalid signature / expired
+    if (!token) {
       const err = new Error("Unauthorized");
       err.status = 401;
       throw err;
     }
+
+    const jwtData = jwt.verify(token, process.env.JWT_SECRET); // For cookies (commented out for the fallback)
 
     // Load latest user status from DB (role updates/disabled users take effect immediately)
     const [rows] = await pool.query(

@@ -81,7 +81,7 @@ export async function loginService({ email, password }) {
   const token = jwt.sign(
     { userId: user.id }, // payload
     process.env.JWT_SECRET, // secret key
-    { expiresIn: "1h" }, // token expires in 2 hours
+    { expiresIn: "1h" }, // jwt token expires in 1 hour
   );
 
   // Return token + safe user object (hashed password)
