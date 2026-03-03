@@ -14,7 +14,25 @@ export async function requireAuth(req, res, next) {
       throw err;
     }
 
-    const jwtData = jwt.verify(token, process.env.JWT_SECRET); // For cookies (commented out for the fallback)
+    let jwtData;
+    try {
+      // For cookies
+      jwtData = jwt.verify(token, process.env.JWT_SECRET);
+    } catch (err) {
+      if (err.name === "TokenExpiredError") {
+        const e = new Error("Session expired"); // Setting a custom message instead of having a default message "jwt expired"
+        e.status = 401;
+        throw e;
+      }
+
+      if (err.name === "JsonWebTokenError") {
+        const e = new Error("Invalid token");
+        e.status = 401;
+        throw e;
+      }
+
+      throw err;
+    }
 
     // Load latest user status from DB (role updates/disabled users take effect immediately)
     const [rows] = await pool.query(

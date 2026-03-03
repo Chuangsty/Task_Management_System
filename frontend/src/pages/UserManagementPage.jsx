@@ -28,7 +28,6 @@ function StatusChip({ status }) {
 }
 
 export default function UserManagementPage() {
-
   const nav = useNavigate();
 
   const [users, setUsers] = useState([]);
@@ -59,6 +58,19 @@ export default function UserManagementPage() {
   });
 
   const [toast, setToast] = useState({ open: false, severity: "success", msg: "" });
+
+  // Allow admin to edit self data without touching status
+  const [myId, setMyId] = useState(null);
+  useEffect(() => {
+    (async () => {
+      try {
+        const res = await api.get("/api/auth/me");
+        setMyId(res.data?.user?.id ?? null);
+      } catch {
+        setMyId(null);
+      }
+    })();
+  }, []);
 
   async function loadUsers() {
     setErrMsg("");
@@ -128,10 +140,12 @@ export default function UserManagementPage() {
 
   async function saveEdit(id) {
     try {
+      const isSelf = Number(id) === Number(myId);
+
       const payload = {
         username: editDraft.username,
         email: editDraft.email,
-        status: editDraft.status,
+        ...(isSelf ? {} : { status: editDraft.status }), // Don't send status if self
         roles: editDraft.roles,
         newPassword: editDraft.newPassword ? editDraft.newPassword : undefined,
       };
@@ -212,11 +226,7 @@ export default function UserManagementPage() {
                     value={newUser.roles} // array of slugs
                     onChange={(e) => setNewUser((p) => ({ ...p, roles: e.target.value }))}
                     displayEmpty
-                    renderValue={(selected) =>
-                      selected.length === 0
-                        ? "Select role(s)"
-                        : selected.map((slug) => roleNameBySlug.get(slug) || slug).join(", ")
-                    }
+                    renderValue={(selected) => (selected.length === 0 ? "Select role(s)" : selected.map((slug) => roleNameBySlug.get(slug) || slug).join(", "))}
                     className="usersSelect usersSelect--wide"
                   >
                     {ROLE_OPTIONS.map((r) => (
@@ -249,7 +259,13 @@ export default function UserManagementPage() {
 
                     <TableCell>
                       {isEditing ? (
-                        <Select size="small" value={editDraft.status} onChange={(e) => setEditDraft((p) => ({ ...p, status: e.target.value }))} className="usersSelect">
+                        <Select
+                          size="small"
+                          value={editDraft.status}
+                          disabled={Number(u.id) === Number(myId)} // ✅ can't change self
+                          onChange={(e) => setEditDraft((p) => ({ ...p, status: e.target.value }))}
+                          className="usersSelect"
+                        >
                           {STATUS_OPTIONS.map((s) => (
                             <MenuItem key={s} value={s}>
                               {s === "ACTIVE" ? "Active" : "Disable"}
@@ -268,9 +284,7 @@ export default function UserManagementPage() {
                           multiple
                           value={editDraft.roles} // array of slugs
                           onChange={(e) => setEditDraft((p) => ({ ...p, roles: e.target.value }))}
-                          renderValue={(selected) =>
-                            selected.map((slug) => roleNameBySlug.get(slug) || slug).join(", ")
-                          }
+                          renderValue={(selected) => selected.map((slug) => roleNameBySlug.get(slug) || slug).join(", ")}
                           className="usersSelect usersSelect--wide"
                         >
                           {ROLE_OPTIONS.map((r) => (
@@ -281,9 +295,7 @@ export default function UserManagementPage() {
                           ))}
                         </Select>
                       ) : (
-                        (u.roles || [])
-                        .map((slug) => ROLE_OPTIONS.find((r) => r.slug === slug)?.name)
-                        .join(", ")
+                        (u.roles || []).map((slug) => ROLE_OPTIONS.find((r) => r.slug === slug)?.name).join(", ")
                       )}
                     </TableCell>
 
