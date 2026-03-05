@@ -5,7 +5,7 @@ import cookieParser from "cookie-parser";
 
 import authRoutes from "./routes/auth.routes.js";
 import adminRoutes from "./routes/admin.routes.js";
-import appRoutes from "./routes/application.routes.js";
+// import appRoutes from "./routes/application.routes.js";
 
 import { notFoundHandler, errorHandler } from "./middleware/error.middleware.js";
 
@@ -29,7 +29,7 @@ app.use(cookieParser()); // Enable cookie parser
 // Routes
 app.use("/api/auth", authRoutes);
 app.use("/api/admin", adminRoutes);
-app.use("/api/apps");
+// app.use("/api/apps");
 
 // Quick health endpoint (useful to check server running on Postman)
 app.get("/api/health", (req, res) => {

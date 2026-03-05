@@ -1,19 +1,3 @@
-.usersPage__top {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  margin-bottom: 12px;
-}
-
-.usersPage__title {
-  font-size: 26px !important;
-  font-weight: 900 !important;
-}
-
-.usersPage__alert {
-  margin-bottom: 12px;
-}
-
 /* table card */
 .usersCard {
   padding: 16px;

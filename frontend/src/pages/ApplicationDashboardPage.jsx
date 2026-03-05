@@ -1,33 +1,53 @@
-import React, { useEffect, useState } from "react";
-import { Box, Container, Typography, Paper, TextField, Button, Card, CardContent, IconButton, Stack, InputAdornment } from "@mui/material";
+import React, { useEffect, useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
+import {
+  Alert,
+  Button,
+  Card,
+  CardContent,
+  Container,
+  IconButton,
+  InputAdornment,
+  Paper,
+  TextField,
+  Typography,
+} from "@mui/material";
 
 import AddIcon from "@mui/icons-material/Add";
 import EditIcon from "@mui/icons-material/Edit";
 import SearchIcon from "@mui/icons-material/Search";
 
 import { api } from "../api/client";
+import "./ApplicationDashboardPage.css";
 
 export default function ApplicationsDashboardPage() {
+  const nav = useNavigate();
+
   const [apps, setApps] = useState([]);
   const [search, setSearch] = useState("");
   const [roles, setRoles] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [errMsg, setErrMsg] = useState("");
 
   useEffect(() => {
     let ignore = false;
 
     async function loadData() {
+      setErrMsg("");
+      setLoading(true);
+
       try {
         const me = await api.get("/api/auth/me");
-        if (!ignore) {
-          setRoles(me.data?.user?.roles ?? []);
-        }
+        if (!ignore) setRoles(me.data?.user?.roles ?? []);
 
         const appsRes = await api.get("/api/apps");
-        if (!ignore) {
-          setApps(appsRes.data ?? []);
-        }
+        if (!ignore) setApps(appsRes.data ?? []);
       } catch (err) {
-        console.error(err);
+        const code = err?.response?.status;
+        if (code === 401 || code === 403) nav("/login");
+        else setErrMsg(err?.response?.data?.error || "Failed to load applications");
+      } finally {
+        if (!ignore) setLoading(false);
       }
     }
 
@@ -36,39 +56,41 @@ export default function ApplicationsDashboardPage() {
     return () => {
       ignore = true;
     };
-  }, []);
+  }, [nav]);
 
   const isProjectLead = roles.includes("PROJECT_LEAD");
 
-  const filteredApps = apps.filter((app) => app.app_name?.toLowerCase().includes(search.toLowerCase()));
+  const filteredApps = useMemo(() => {
+    const s = search.trim().toLowerCase();
+    if (!s) return apps;
+    return apps.filter((a) => {
+      const hay = `${a.app_name || ""} ${a.app_acronym || ""} ${a.app_description || ""}`.toLowerCase();
+      return hay.includes(s);
+    });
+  }, [apps, search]);
+
+  function formatDate(d) {
+    if (!d) return "N/A";
+    // If backend returns "YYYY-MM-DD", keep it. If it's a date string, also ok.
+    return String(d).slice(0, 10);
+  }
 
   return (
-    <Box sx={{ backgroundColor: "#f5f5f5", minHeight: "100vh", pt: 4 }}>
-      <Container maxWidth="lg">
-        {/* Page Title */}
-        <Typography variant="h5" fontWeight="bold" sx={{ mb: 3 }}>
-          Applications Dashboard
-        </Typography>
+    <Container maxWidth={false} disableGutters className="appsPageContainer">
+      {/* Page Title */}
+      <Typography variant="h5" fontWeight="bold" sx={{ mb: 3 }}>
+        Applications Dashboard
+      </Typography>
 
-        <Paper sx={{ p: 3 }}>
-          {/* Top Row */}
-          <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 3 }}>
-            <Typography variant="h6">Applications</Typography>
-
-            {isProjectLead && (
-              <Button variant="outlined" startIcon={<AddIcon />}>
-                New App
-              </Button>
-            )}
-          </Stack>
-
-          {/* Search */}
+      <Paper className="appsCard">
+        {/* Top row: Search (left) + New App (right) */}
+        <div className="appsTopRow">
           <TextField
-            fullWidth
+            size="small"
             placeholder="Application"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            sx={{ mb: 3 }}
+            className="appsSearch"
             slotProps={{
               startAdornment: (
                 <InputAdornment position="start">
@@ -78,36 +100,56 @@ export default function ApplicationsDashboardPage() {
             }}
           />
 
-          {/* App Cards */}
-          <Stack spacing={2}>
-            {filteredApps.map((app) => (
-              <Card key={app.app_acronym}>
+          {isProjectLead ? (
+            <Button variant="outlined" startIcon={<AddIcon />} className="appsNewAppBtn">
+              New App
+            </Button>
+          ) : (
+            // keeps alignment consistent when button is hidden
+            <div className="appsNewAppBtnPlaceholder" />
+          )}
+        </div>
+
+        {/* List */}
+        <div className="appsList">
+          {loading ? (
+            <div className="appsEmpty">Loading…</div>
+          ) : filteredApps.length === 0 ? (
+            <div className="appsEmpty">No applications found</div>
+          ) : (
+            filteredApps.map((app) => (
+              <Card key={app.app_acronym || app.app_id} className="appItem" elevation={0}>
                 <CardContent>
-                  <Stack direction="row" justifyContent="space-between" alignItems="flex-start">
-                    <Box>
-                      <Typography fontWeight="bold">{app.app_name}</Typography>
+                  {/* Title row + edit icon */}
+                  <div className="appItemTop">
+                    <Typography className="appTitle">{app.app_name || "Untitled Application"}</Typography>
 
-                      <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
-                        Status: {app.state_name || "N/A"} | Project Lead: {app.project_lead_name || "N/A"} | Start date: {app.app_startDate} | End date: {app.app_endDate}
-                      </Typography>
-
-                      <Typography variant="body2" sx={{ mt: 1 }}>
-                        {app.app_description}
-                      </Typography>
-                    </Box>
-
-                    {isProjectLead && (
-                      <IconButton>
-                        <EditIcon />
+                    {isProjectLead ? (
+                      <IconButton className="appEditBtn" size="small">
+                        <EditIcon fontSize="small" />
                       </IconButton>
-                    )}
-                  </Stack>
+                    ) : null}
+                  </div>
+
+                  {/* Meta row */}
+                  <div className="appMetaRow">
+                    <span className="appMetaItem">Status: {app.state_name || "N/A"}</span>
+                    <span className="appMetaSep">|</span>
+                    <span className="appMetaItem">Project Lead: {app.project_lead_name || "N/A"}</span>
+                    <span className="appMetaSep">|</span>
+                    <span className="appMetaItem">Start date: {formatDate(app.app_startDate)}</span>
+                    <span className="appMetaSep">|</span>
+                    <span className="appMetaItem">End date: {formatDate(app.app_endDate)}</span>
+                  </div>
+
+                  {/* Description box */}
+                  <div className="appDescBox">{app.app_description || "—"}</div>
                 </CardContent>
               </Card>
-            ))}
-          </Stack>
-        </Paper>
-      </Container>
-    </Box>
+            ))
+          )}
+        </div>
+      </Paper>
+    </Container>
   );
 }

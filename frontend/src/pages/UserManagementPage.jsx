@@ -161,11 +161,11 @@ export default function UserManagementPage() {
 
   return (
     <Container maxWidth={false} disableGutters className="usersPageContainer">
-      {errMsg ? (
-        <Alert severity="error" className="usersPage__alert">
-          {errMsg}
-        </Alert>
-      ) : null}
+      
+      {/* Page Title */}
+      <Typography variant="h5" fontWeight="bold" sx={{ mb: 3 }}>
+        User Management Dashboard
+      </Typography>
 
       <Paper className="usersCard">
         <div className="usersTopRow">
