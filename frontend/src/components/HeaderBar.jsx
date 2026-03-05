@@ -8,6 +8,7 @@ export default function HeaderBar() {
   const nav = useNavigate();
 
   const [me, setMe] = useState(null);
+  const [roles, setRoles] = useState([]);
   const [anchorEl, setAnchorEl] = useState(null);
   const open = Boolean(anchorEl);
 
@@ -17,8 +18,9 @@ export default function HeaderBar() {
 
     async function loadMe() {
       try {
-        const res = await api.get("/api/auth/me");
-        if (!ignore) setMe(res.data.user);
+        const me = await api.get("/api/auth/me");
+        if (!ignore) setMe(me.data.user);
+        if (!ignore) setRoles(me.data?.user?.roles ?? []);
       } catch (err) {
         // If cookie invalid/expired, go back login
         const code = err?.response?.status;
@@ -32,6 +34,7 @@ export default function HeaderBar() {
   }, [nav]);
 
   const userName = me?.username || "User";
+  const isAdmin = roles.includes("ADMIN");
 
   async function handleLogout() {
     try {
@@ -53,8 +56,22 @@ export default function HeaderBar() {
             <IconButton onClick={(e) => setAnchorEl(e.currentTarget)} size="small">
               <Avatar className="headerBar__avatar">{userName?.[0]?.toUpperCase() || "U"}</Avatar>
             </IconButton>
-
+            
             <Menu anchorEl={anchorEl} open={open} onClose={() => setAnchorEl(null)} anchorOrigin={{ vertical: "bottom", horizontal: "right" }} transformOrigin={{ vertical: "top", horizontal: "right" }}>
+              
+              {/* IF ADMIN: Button to navigate to user management page */}
+              {isAdmin && (
+                <MenuItem
+                onClick={async () => {
+                  setAnchorEl(null);
+                  nav("/users");
+                }}
+                >
+                  User Management
+                </MenuItem>
+              )}
+              
+              {/* Button to navigate to application page */}
               <MenuItem
                 onClick={async () => {
                   setAnchorEl(null);
