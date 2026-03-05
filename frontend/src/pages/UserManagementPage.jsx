@@ -106,6 +106,7 @@ export default function UserManagementPage() {
     return filtered.slice(start, start + rowsPerPage);
   }, [filtered, page, rowsPerPage]);
 
+  // Add user function
   async function addUser() {
     try {
       await api.post("/api/admin/new_user", {
@@ -238,6 +239,7 @@ export default function UserManagementPage() {
                   </Select>
                 </TableCell>
                 <TableCell>
+                  {/* Add user button */}
                   <Button variant="contained" size="small" startIcon={<PersonAddAltRoundedIcon />} onClick={addUser} className="usersAddBtn">
                     Add User
                   </Button>

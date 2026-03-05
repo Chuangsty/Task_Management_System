@@ -60,6 +60,16 @@ export default function ApplicationsDashboardPage() {
 
   const isProjectLead = roles.includes("PROJECT_LEAD");
 
+  // Function to add app
+  async function addApp() {
+    try {
+      
+    } catch (error) {
+      
+    }
+    
+  }
+
   const filteredApps = useMemo(() => {
     const s = search.trim().toLowerCase();
     if (!s) return apps;
@@ -101,7 +111,9 @@ export default function ApplicationsDashboardPage() {
           />
 
           {isProjectLead ? (
-            <Button variant="outlined" startIcon={<AddIcon />} className="appsNewAppBtn">
+            // <Button variant="outlined" startIcon={<AddIcon />} className="appsNewAppBtn">
+            // On click add new application
+            <Button variant="outlined" startIcon={<AddIcon />} onClick={addApp} className="appsNewAppBtn">
               New App
             </Button>
           ) : (

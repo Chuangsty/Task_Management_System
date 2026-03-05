@@ -35,13 +35,6 @@ CREATE TABLE IF NOT EXISTS roles(
   role_name VARCHAR(50) NOT NULL UNIQUE
 );
 
--- Permissions table
-CREATE TABLE IF NOT EXISTS user_permissions (
-  id INT AUTO_INCREMENT PRIMARY KEY,
-  slug VARCHAR(50) NOT NULL UNIQUE,
-  description VARCHAR(100)
-);
-
 -- User roles (many to many) table
 CREATE TABLE IF NOT EXISTS user_roles (
   user_id INT NOT NULL,
@@ -56,26 +49,6 @@ CREATE TABLE IF NOT EXISTS user_roles (
 
   CONSTRAINT fk_user_roles_roles
     FOREIGN KEY (role_id) REFERENCES roles(id)
-);
-
--- ===========================================
--- SECTION 1.1: ACCESS CONTROL PERMISSIONS
--- ===========================================
-
--- Role's permissions
-CREATE TABLE IF NOT EXISTS role_user_permissions (
-  role_id INT NOT NULL,
-  user_permissions_id INT NOT NULL,
-  PRIMARY KEY (role_id, user_permissions_id),
-
-  -- Index to speed up: "find all roles that have permission X"
-  KEY idx_role_permissions_permission (user_permissions_id),
-
-  CONSTRAINT fk_role_permissions_roles
-    FOREIGN KEY (role_id) REFERENCES roles(id),
-
-  CONSTRAINT fk_role_permissions_permissions
-    FOREIGN KEY (user_permissions_id) REFERENCES user_permissions(id)
 );
 
 -- =========================
