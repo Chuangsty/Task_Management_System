@@ -1,5 +1,10 @@
-import React, { useEffect, useState } from "react";
-import { Outlet, useNavigate } from "react-router-dom";
+import React, { useState } from "react";
+/* useOutletContext is a React Router hook used to pass data from a 
+parent route component to its child routes without using props manually. 
+e.g. lets ProtectedRoute → HeaderBar → Pages share the logged-in 
+user data (me, roles) without calling /api/auth/me again.
+*/
+import { Outlet, useNavigate, useOutletContext } from "react-router-dom";
 import { AppBar, Toolbar, Typography, Avatar, Menu, MenuItem, IconButton, Box } from "@mui/material";
 import { api } from "../api/client";
 import "./HeaderBar.css";
@@ -7,31 +12,10 @@ import "./HeaderBar.css";
 export default function HeaderBar() {
   const nav = useNavigate();
 
-  const [me, setMe] = useState(null);
-  const [roles, setRoles] = useState([]);
+  const { me, roles } = useOutletContext();
+
   const [anchorEl, setAnchorEl] = useState(null);
   const open = Boolean(anchorEl);
-
-  // Displaying username beside welcome
-  useEffect(() => {
-    let ignore = false;
-
-    async function loadMe() {
-      try {
-        const me = await api.get("/api/auth/me");
-        if (!ignore) setMe(me.data.user);
-        if (!ignore) setRoles(me.data?.user?.roles ?? []);
-      } catch (err) {
-        // If cookie invalid/expired, go back login
-        const code = err?.response?.status;
-        if (code === 401 || code === 403) nav("/login");
-      }
-    }
-    loadMe();
-    return () => {
-      ignore = true;
-    };
-  }, [nav]);
 
   const userName = me?.username || "User";
   const isAdmin = roles.includes("ADMIN");
@@ -56,21 +40,20 @@ export default function HeaderBar() {
             <IconButton onClick={(e) => setAnchorEl(e.currentTarget)} size="small">
               <Avatar className="headerBar__avatar">{userName?.[0]?.toUpperCase() || "U"}</Avatar>
             </IconButton>
-            
+
             <Menu anchorEl={anchorEl} open={open} onClose={() => setAnchorEl(null)} anchorOrigin={{ vertical: "bottom", horizontal: "right" }} transformOrigin={{ vertical: "top", horizontal: "right" }}>
-              
               {/* IF ADMIN: Button to navigate to user management page */}
               {isAdmin && (
                 <MenuItem
-                onClick={async () => {
-                  setAnchorEl(null);
-                  nav("/users");
-                }}
+                  onClick={async () => {
+                    setAnchorEl(null);
+                    nav("/users");
+                  }}
                 >
                   User Management
                 </MenuItem>
               )}
-              
+
               {/* Button to navigate to application page */}
               <MenuItem
                 onClick={async () => {
@@ -95,7 +78,7 @@ export default function HeaderBar() {
       </AppBar>
 
       <main className="headerBar__content">
-        <Outlet />
+        <Outlet context={{ me, roles }} />
       </main>
     </div>
   );

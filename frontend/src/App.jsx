@@ -4,6 +4,7 @@ import { CssBaseline, ThemeProvider, createTheme } from "@mui/material";
 
 import LoginPage from "./pages/LoginPage.jsx";
 import HeaderBar from "./components/HeaderBar";
+import ProtectedRoute from "./components/ProtectedRoute.jsx";
 import UserManagementPage from "./pages/UserManagementPage.jsx";
 import ApplicationsDashboardPage from "./pages/ApplicationDashboardPage.jsx";
 
@@ -20,13 +21,17 @@ export default function App() {
         <Route path="/login" element={<LoginPage />} />
 
         {/* Admin's view page of user management */}
-        <Route path="/users" element={<HeaderBar />}>
-          <Route index element={<UserManagementPage />} />
+        <Route element={<ProtectedRoute />}>
+          <Route element={<HeaderBar />}>
+            <Route path="/users" index element={<UserManagementPage />} />
+          </Route>
         </Route>
 
         {/* Non-Admin's view page of project management */}
-        <Route path="/applications" element={<HeaderBar />}>
-          <Route index element={<ApplicationsDashboardPage />} />
+        <Route element={<ProtectedRoute roles={["ADMIN"]} />}>
+          <Route element={<HeaderBar />}>
+            <Route path="/applications" index element={<ApplicationsDashboardPage />} />
+          </Route>
         </Route>
 
         <Route path="*" element={<Navigate to="/login" replace />} />

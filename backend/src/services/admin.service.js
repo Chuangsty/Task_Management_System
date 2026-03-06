@@ -8,10 +8,7 @@ Pasword policy:
 function validatePassword(pw) {
   if (typeof pw !== "string") return "Password must be a string";
   if (pw.length < 8 || pw.length > 10) return "Password must be 8-10 characters long";
-  if (!/[A-Za-z]/.test(pw)) return "Password must include a letter";
-  if (!/[0-9]/.test(pw)) return "Password must include a number";
-  if (!/[^A-Za-z0-9]/.test(pw)) return "Password must include a special character";
-  // e.g. [^abc] = any character that is NOT a, b, or c
+  if (!/[A-Za-z0-9]/.test(pw) || !/[0-9]/.test(pw) || !/[^A-Za-z0-9]/.test(pw)) return "Password must include a letter, number & special character";
   return null; // Return null as no error in pw
 }
 
@@ -65,15 +62,8 @@ export async function adminCreateUserService({ username, email, password, roles 
   const conn = await pool.getConnection();
 
   // Basic validation (keep it simple but safe)
-  if (!username || !email || !password) {
-    const err = new Error("username, email, and password are required");
-    err.status = 400;
-    throw err;
-  }
-
-  // Roles mandatory
-  if (!Array.isArray(roles) || roles.length === 0) {
-    const err = new Error("At least one role is required");
+  if (!username || !email || !password || !Array.isArray(roles) || roles.length === 0) {
+    const err = new Error("Name, email, password and role(s) are required");
     err.status = 400;
     throw err;
   }

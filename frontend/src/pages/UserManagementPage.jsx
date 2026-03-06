@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useOutletContext } from "react-router-dom";
 import { Alert, Button, Checkbox, Chip, CircularProgress, Container, IconButton, InputAdornment, ListItemText, MenuItem, Paper, Select, Snackbar, Table, TableBody, TableCell, TableContainer, TableHead, TablePagination, TableRow, TextField, Typography } from "@mui/material";
 
 import ArrowBackRoundedIcon from "@mui/icons-material/ArrowBackRounded";
@@ -29,6 +29,10 @@ function StatusChip({ status }) {
 
 export default function UserManagementPage() {
   const nav = useNavigate();
+
+  // using parent context, in this case, the user id
+  const { me } = useOutletContext();
+  const myId = me?.id ?? null;
 
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -60,17 +64,17 @@ export default function UserManagementPage() {
   const [toast, setToast] = useState({ open: false, severity: "success", msg: "" });
 
   // Allow admin to edit self data without touching status
-  const [myId, setMyId] = useState(null);
-  useEffect(() => {
-    (async () => {
-      try {
-        const res = await api.get("/api/auth/me");
-        setMyId(res.data?.user?.id ?? null);
-      } catch {
-        setMyId(null);
-      }
-    })();
-  }, []);
+  // const [myId, setMyId] = useState(null);
+  // useEffect(() => {
+  //   (async () => {
+  //     try {
+  //       const res = await api.get("/api/auth/me");
+  //       setMyId(res.data?.user?.id ?? null);
+  //     } catch {
+  //       setMyId(null);
+  //     }
+  //   })();
+  // }, []);
 
   async function loadUsers() {
     setErrMsg("");
@@ -80,7 +84,8 @@ export default function UserManagementPage() {
       setUsers(res.data.users || []);
     } catch (err) {
       const code = err?.response?.status;
-      if (code === 401 || code === 403) nav("/login");
+      if (code === 401) nav("/login", { replace: true });
+      else if (code === 403) nav("/applications", { replace: true });
       else setErrMsg(err?.response?.data?.error || "Failed to load users");
     } finally {
       setLoading(false);
@@ -116,7 +121,7 @@ export default function UserManagementPage() {
         roles: newUser.roles,
       });
       setToast({ open: true, severity: "success", msg: "User created" });
-      setNewUser({ username: "", email: "", password: "", status: "ACTIVE", roles: ["ADMIN"] });
+      setNewUser({ username: "", email: "", password: "", status: "ACTIVE", roles: [] });
       await loadUsers();
     } catch (err) {
       setToast({ open: true, severity: "error", msg: err?.response?.data?.error || "Create failed" });
@@ -162,13 +167,18 @@ export default function UserManagementPage() {
 
   return (
     <Container maxWidth={false} disableGutters className="usersPageContainer">
-      
       {/* Page Title */}
       <Typography variant="h5" fontWeight="bold" sx={{ mb: 3 }}>
         User Management Dashboard
       </Typography>
 
       <Paper className="usersCard">
+        {errMsg && (
+          <Alert severity="error" sx={{ mb: 2 }}>
+            {errMsg}
+          </Alert>
+        )}
+
         <div className="usersTopRow">
           <TextField
             size="small"

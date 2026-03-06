@@ -6,9 +6,11 @@ const router = Router();
 
 // POST /api/auth/login
 router.post("/login", login);
-router.post("/logout", logout);
 
 // GET /api/auth/me
 router.get("/me", requireAuth, meController);
+
+// POST /api/auth/logout
+router.post("/logout", logout);
 
 export default router;

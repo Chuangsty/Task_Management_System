@@ -1,17 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { useNavigate } from "react-router-dom";
-import {
-  Alert,
-  Button,
-  Card,
-  CardContent,
-  Container,
-  IconButton,
-  InputAdornment,
-  Paper,
-  TextField,
-  Typography,
-} from "@mui/material";
+import { useNavigate, useOutletContext } from "react-router-dom";
+import { Alert, Button, Card, CardContent, Container, IconButton, InputAdornment, Paper, TextField, Typography } from "@mui/material";
 
 import AddIcon from "@mui/icons-material/Add";
 import EditIcon from "@mui/icons-material/Edit";
@@ -23,21 +12,24 @@ import "./ApplicationDashboardPage.css";
 export default function ApplicationsDashboardPage() {
   const nav = useNavigate();
 
+  // using parent context, in this case, the roles
+  const { roles } = useOutletContext();
+
   const [apps, setApps] = useState([]);
   const [search, setSearch] = useState("");
-  const [roles, setRoles] = useState([]);
   const [loading, setLoading] = useState(true);
   const [errMsg, setErrMsg] = useState("");
 
   // Add app pop up React feature
-  const [openCreate, setOpenCreate] = useState(false); // Add user dialog hidden/popup state
-  const [createDraft, setCreateDraft] = useState({ // Holds user inputs
-    name: "",
-    startDate: "",
-    endDate: "",
-    description: "",
-  });
-  const [toast, setToast] = useState({ open: false, severity: "success", msg: ""}); // Notification popup of success/fail creation
+  // const [openCreate, setOpenCreate] = useState(false); // Add user dialog hidden/popup state
+  // const [createDraft, setCreateDraft] = useState({
+  //   // Holds user inputs
+  //   name: "",
+  //   startDate: "",
+  //   endDate: "",
+  //   description: "",
+  // });
+  // const [toast, setToast] = useState({ open: false, severity: "success", msg: "" }); // Notification popup of success/fail creation
 
   useEffect(() => {
     let ignore = false;
@@ -47,15 +39,15 @@ export default function ApplicationsDashboardPage() {
       setLoading(true);
 
       try {
-        const me = await api.get("/api/auth/me");
-        if (!ignore) setRoles(me.data?.user?.roles ?? []);
-
         const appsRes = await api.get("/api/apps");
         if (!ignore) setApps(appsRes.data ?? []);
       } catch (err) {
         const code = err?.response?.status;
-        if (code === 401 || code === 403) nav("/login");
-        else setErrMsg(err?.response?.data?.error || "Failed to load applications");
+        if (code === 401) nav("/login", { replace: true });
+        else if (code === 403) nav("/applications", { replace: true });
+        else if (!ignore) {
+          setErrMsg(err?.response?.data?.error || "Failed to load applications");
+        }
       } finally {
         if (!ignore) setLoading(false);
       }
@@ -71,19 +63,13 @@ export default function ApplicationsDashboardPage() {
   const isProjectLead = roles.includes("PROJECT_LEAD");
 
   // Fucntion for add app dialog popup
-  async function addAppPopup() {
-    
-  }
+  async function addAppPopup() {}
 
   // Function to add app
-  async function addApp() {
-    try {
-      
-    } catch (error) {
-      
-    }
-    
-  }
+  // async function addApp() {
+  //   try {
+  //   } catch (error) {}
+  // }
 
   const filteredApps = useMemo(() => {
     const s = search.trim().toLowerCase();
@@ -108,6 +94,12 @@ export default function ApplicationsDashboardPage() {
       </Typography>
 
       <Paper className="appsCard">
+        {errMsg && (
+          <Alert severity="error" sx={{ mb: 2 }}>
+            {errMsg}
+          </Alert>
+        )}
+
         {/* Top row: Search (left) + New App (right) */}
         <div className="appsTopRow">
           <TextField
