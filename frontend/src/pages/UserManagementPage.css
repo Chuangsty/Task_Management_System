@@ -33,6 +33,12 @@ table card .usersCard {
 .usersOnboardRow {
   background: #f1f4f9;
 }
+/* .usersOnboardRow .MuiFormControl-root {
+  background: #f1f4f9;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+} */
 
 .usersSelect {
   min-width: 120px;
@@ -71,7 +77,12 @@ table card .usersCard {
 }
 
 /* KEY: stop columns from expanding when inputs appear */
+/* .usersTable {
+  width: 100%;
+  table-layout: fixed;
+} */
 .usersTable {
+  font-size: 11px;
   width: 100%;
   table-layout: fixed;
 }

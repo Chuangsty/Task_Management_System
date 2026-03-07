@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useState } from "react";
 import { useNavigate, useOutletContext } from "react-router-dom";
 import { Alert, Button, Checkbox, Chip, CircularProgress, Container, IconButton, InputAdornment, ListItemText, MenuItem, Paper, Select, Snackbar, Table, TableBody, TableCell, TableContainer, TableHead, TablePagination, TableRow, TextField, Typography } from "@mui/material";
 
-import ArrowBackRoundedIcon from "@mui/icons-material/ArrowBackRounded";
+// import ArrowBackRoundedIcon from "@mui/icons-material/ArrowBackRounded";
 import SearchRoundedIcon from "@mui/icons-material/SearchRounded";
 import EditOutlinedIcon from "@mui/icons-material/EditOutlined";
 import CheckRoundedIcon from "@mui/icons-material/CheckRounded";
@@ -43,71 +43,13 @@ export default function UserManagementPage() {
   const [rowsPerPage, setRowsPerPage] = useState(10);
 
   // onboarding row
-  // const [newUser, setNewUser] = useState({
-  //   username: "",
-  //   email: "",
-  //   password: "",
-  //   status: "ACTIVE",
-  //   roles: [],
-  // });
-  // const [newUserErrors, setNewUserErrors] = useState({
-  //   username: "",
-  //   email: "",
-  //   password: "",
-  //   roles: "",
-  // });
-
-  const initialNewUser = {
+  const [newUser, setNewUser] = useState({
     username: "",
     email: "",
     password: "",
     status: "ACTIVE",
     roles: [],
-  };
-  // onboarding row
-  const [newUser, setNewUser] = useState(initialNewUser);
-  // oboarding row errors
-  const [newUserErrors, setNewUserErrors] = useState(validateAllNewUserFields(initialNewUser));
-
-  // onboarding input fields username validation
-  function validateNewUsername(username) {
-    const value = String(username || "").trim();
-    if (!value) return "Username is required";
-    return "";
-  }
-  // onboarding input fields username validation
-  function validateNewEmail(email) {
-    const value = String(email || "").trim();
-    if (!value) return "Field is required";
-    if (!/^\S+@\S+\.\S+$/.test(value)) return "Email is invalid";
-    return "";
-  }
-  // onboarding input fields username validation
-  function validateNewPassword(password) {
-    const value = String(password || "");
-    if (!value) return "Password is required";
-    if (value.length < 8 || value.length > 10) {
-      return "Must be 8-10 characters long";
-    }
-    if (!/[A-Z]/.test(value) || !/[a-z]/.test(value) || !/[0-9]/.test(value) || !/[^A-Za-z0-9]/.test(value)) {
-      return "Uppercase & lowercase letter, number & special character required";
-    }
-    return "";
-  }
-  // onboarding input fields username validation
-  function validateNewRoles(roles) {
-    if (!Array.isArray(roles) || roles.length === 0) return "At least one role is required";
-    return "";
-  }
-  // onboarding ALL input fields validation
-  function validateAllNewUserFields(user) {
-    return {
-      username: validateNewUsername(user.username),
-      email: validateNewEmail(user.email),
-      password: validateNewPassword(user.password),
-      roles: validateNewRoles(user.roles),
-    };
-  }
+  });
 
   // edit row
   const [editingId, setEditingId] = useState(null);
@@ -120,19 +62,6 @@ export default function UserManagementPage() {
   });
 
   const [toast, setToast] = useState({ open: false, severity: "success", msg: "" });
-
-  // Allow admin to edit self data without touching status
-  // const [myId, setMyId] = useState(null);
-  // useEffect(() => {
-  //   (async () => {
-  //     try {
-  //       const res = await api.get("/api/auth/me");
-  //       setMyId(res.data?.user?.id ?? null);
-  //     } catch {
-  //       setMyId(null);
-  //     }
-  //   })();
-  // }, []);
 
   async function loadUsers() {
     setErrMsg("");
@@ -171,11 +100,6 @@ export default function UserManagementPage() {
 
   // Add user function
   async function addUser() {
-    const errors = validateAllNewUserFields(newUser);
-    setNewUserErrors(errors);
-
-    const hasError = Object.values(errors).some(Boolean);
-    if (hasError) return;
 
     try {
       await api.post("/api/admin/new_user", {
@@ -186,7 +110,6 @@ export default function UserManagementPage() {
       });
       setToast({ open: true, severity: "success", msg: "User created" });
       setNewUser({ username: "", email: "", password: "", status: "ACTIVE", roles: [] });
-      setNewUserErrors({ username: "", email: "", password: "", roles: "" });
       await loadUsers();
     } catch (err) {
       setToast({ open: true, severity: "error", msg: err?.response?.data?.error || "Create failed" });
@@ -282,43 +205,32 @@ export default function UserManagementPage() {
 
             <TableBody>
               {/* Onboarding row */}
-              <TableRow>
+              <TableRow className="usersOnboardRow ">
+                
                 <TableCell>
                   <TextField
                     fullWidth
                     size="small"
                     placeholder="Username"
                     value={newUser.username}
-                    onChange={(e) => {
-                      const value = e.target.value;
-                      setNewUser((p) => ({ ...p, username: value }));
-                      setNewUserErrors((p) => ({
-                        ...p,
-                        username: validateNewUsername(value),
-                      }));
-                    }}
-                    error={!!newUserErrors.username}
-                    helperText={newUserErrors.username || " "}
+                    onChange={(e) => 
+                      setNewUser((p) => ({ ...p, username: e.target.value }))}
                   />
                 </TableCell>
+
+                {/* Email input */}
                 <TableCell>
                   <TextField
                     fullWidth
                     size="small"
                     placeholder="Email"
                     value={newUser.email}
-                    onChange={(e) => {
-                      const value = e.target.value;
-                      setNewUser((p) => ({ ...p, email: value }));
-                      setNewUserErrors((p) => ({
-                        ...p,
-                        email: validateNewEmail(value),
-                      }));
-                    }}
-                    error={!!newUserErrors.email}
-                    helperText={newUserErrors.email || " "}
+                    onChange={(e) => 
+                      setNewUser((p) => ({ ...p, email: e.target.value }))}
                   />
                 </TableCell>
+
+                {/* Password input */}
                 <TableCell>
                   <TextField
                     fullWidth
@@ -326,39 +238,28 @@ export default function UserManagementPage() {
                     placeholder="Password"
                     type="password"
                     value={newUser.password}
-                    onChange={(e) => {
-                      const value = e.target.value;
-                      setNewUser((p) => ({ ...p, password: value }));
-                      setNewUserErrors((p) => ({
-                        ...p,
-                        password: validateNewPassword(value),
-                      }));
-                    }}
-                    error={!!newUserErrors.password}
-                    helperText={newUserErrors.password || " "}
+                    onChange={(e) =>
+                      setNewUser((p) => ({ ...p, password: e.target.value }))}
                   />
                 </TableCell>
+
+                {/* DEFAULT status */}
                 <TableCell>
                   <StatusChip status="ACTIVE" />
                 </TableCell>
+
+                {/* Role(s) input */}
                 <TableCell>
                   <Select
                     fullWidth
                     size="small"
                     multiple
                     value={newUser.roles} // array of slugs
-                    onChange={(e) => {
-                      const value = e.target.value;
-                      setNewUser((p) => ({ ...p, roles: value }));
-                      setNewUserErrors((p) => ({
-                        ...p,
-                        roles: validateNewRoles(value),
-                      }));
-                    }}
+                    onChange={(e) => 
+                      setNewUser((p) => ({ ...p, roles: e.target.value }))}
                     displayEmpty
                     renderValue={(selected) => (selected.length === 0 ? "Select role(s)" : selected.map((slug) => roleNameBySlug.get(slug) || slug).join(", "))}
                     className="usersSelect usersSelect--wide"
-                    error={!!newUserErrors.roles}
                   >
                     {ROLE_OPTIONS.map((r) => (
                       <MenuItem key={r.slug} value={r.slug}>
@@ -367,19 +268,10 @@ export default function UserManagementPage() {
                       </MenuItem>
                     ))}
                   </Select>
-
-                  {newUserErrors.roles ? (
-                    <Typography variant="caption" color="error" sx={{ mt: 0.5, display: "block" }}>
-                      {newUserErrors.roles}
-                    </Typography>
-                  ) : (
-                    <Typography variant="caption" sx={{ mt: 0.5, display: "block", visibility: "hidden" }}>
-                      placeholder
-                    </Typography>
-                  )}
                 </TableCell>
+
+                {/* Add user button */}
                 <TableCell>
-                  {/* Add user button */}
                   <Button variant="contained" size="small" startIcon={<PersonAddAltRoundedIcon />} onClick={addUser} className="usersAddBtn">
                     Add User
                   </Button>

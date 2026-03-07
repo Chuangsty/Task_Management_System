@@ -8,7 +8,7 @@ Pasword policy:
 function validatePassword(pw) {
   if (typeof pw !== "string") return "Password must be a string";
   if (pw.length < 8 || pw.length > 10) return "Password must be 8-10 characters long";
-  if (!/[a-z]/.test(pw) || !/[A-Z]/.test(pw) || !/[0-9]/.test(pw) || !/[^A-Za-z0-9]/.test(pw)) return "Password must include uppercase letter, owercase letter, number & special character";
+  if (!/[a-z]/.test(pw) || !/[A-Z]/.test(pw) || !/[0-9]/.test(pw) || !/[^A-Za-z0-9]/.test(pw)) return "Password must include uppercase & lowercase letter, number & special character";
   return null; // Return null as no error in pw
 }
 
@@ -74,7 +74,7 @@ export async function adminCreateUserService({ username, email, password, roles 
     // Normalize username and email
     const cleanUsername = String(username).trim();
     const cleanEmail = String(email).trim().toLowerCase();
-
+    
     // Set DEFAULT ACTIVE status ID
     const [[activeStatus]] = await conn.query(`SELECT id FROM account_status WHERE slug = 'ACTIVE' LIMIT 1`);
 
