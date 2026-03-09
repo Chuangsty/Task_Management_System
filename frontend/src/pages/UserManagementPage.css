@@ -1,4 +1,4 @@
-table card .usersCard {
+.usersCard {
   padding: 16px;
   border-radius: 16px !important;
 }
@@ -76,11 +76,6 @@ table card .usersCard {
   overflow-x: auto;
 }
 
-/* KEY: stop columns from expanding when inputs appear */
-/* .usersTable {
-  width: 100%;
-  table-layout: fixed;
-} */
 .usersTable {
   font-size: 11px;
   width: 100%;
@@ -95,8 +90,7 @@ table card .usersCard {
 }
 
 /* make inputs/selects fit inside cell instead of forcing wider columns */
-.usersOnboardRow .MuiTextField-root,
-.MuiTableBody-root .MuiTextField-root {
+.usersOnboardRow {
   width: 100%;
 }
 
