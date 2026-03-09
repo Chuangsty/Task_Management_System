@@ -1,4 +1,3 @@
-// import { application } from "express";
 import { pool } from "../config/db.js";
 
 export async function listAppsService() {
@@ -20,6 +19,15 @@ export async function createAppsService({ app_name, app_startDate, app_endDate, 
     err.status = 400;
     throw err;
   }
+  // get today's date in YYYY-MM-DD
+  const today = new Date().toISOString().split("T")[0];
+  // start date cannot be before current date
+  if (app_startDate < today) {
+    const err = new Error("Start date cannot be before current date");
+    err.status = 400;
+    throw err;
+  }
+  // end date cannot be before start date
   if (app_startDate && app_endDate && app_startDate > app_endDate) {
     const err = new Error("End date must be later than start date");
     err.status = 400;
@@ -49,6 +57,14 @@ export async function createAppsService({ app_name, app_startDate, app_endDate, 
     if (!stateRow) {
       const err = new Error("Default application state not found");
       err.status = 500;
+      throw err;
+    }
+
+    // Check application name unique
+    const [[a]] = await conn.query("SELECT app_name FROM applications WHERE app_name = ? LIMIT 1", [cleanName]);
+    if (a) {
+      const err = new Error("Application name already exists");
+      err.status = 409;
       throw err;
     }
 
@@ -96,6 +112,89 @@ export async function createAppsService({ app_name, app_startDate, app_endDate, 
         app_endDate: app_endDate,
         app_description: cleanDescription,
       },
+    };
+  } catch (err) {
+    await conn.rollback();
+    throw err;
+  } finally {
+    conn.release();
+  }
+}
+
+export async function updateAppsService({ app_id, app_startDate, app_endDate, app_description }) {
+  // validate targetted app id
+  if (!Number.isInteger(app_id) || app_id <= 0) {
+    const err = new Error("Invalid app_id");
+    err.status = 400;
+    throw err;
+  }
+
+  // validate app dates
+  if (!app_startDate || !app_endDate) {
+    const err = new Error("Start and end dates are required");
+    err.status = 400;
+    throw err;
+  }
+  // get today's date in YYYY-MM-DD
+  const today = new Date().toISOString().split("T")[0];
+  // start date cannot be before current date
+  if (app_startDate < today) {
+    const err = new Error("Start date cannot be before current date");
+    err.status = 400;
+    throw err;
+  }
+  // end date cannot be before start date
+  if (app_startDate && app_endDate && app_startDate > app_endDate) {
+    const err = new Error("End date must be later than start date");
+    err.status = 400;
+    throw err;
+  }
+
+  // DEscription
+  const cleanDescription = app_description == null ? null : String(app_description).trim();
+  // == null -> IS condition, null -> FOR WHEN value if true, String... -> FOR WHEN value if false
+
+  const conn = await pool.getConnection();
+  try {
+    await conn.beginTransaction();
+
+    const [[existing]] = await conn.query(
+      `SELECT app_id
+       FROM applications
+       WHERE app_id = ?
+       LIMIT 1`,
+      [app_id],
+    );
+
+    if (!existing) {
+      const err = new Error("Application not found");
+      err.status = 404;
+      throw err;
+    }
+
+    await conn.query(
+      `
+      UPDATE applications
+      SET app_startDate = ?, app_endDate = ?, app_description = ?
+      WHERE app_id = ?
+      `,
+      [app_startDate, app_endDate, cleanDescription, app_id],
+    );
+
+    const [[updatedApp]] = await conn.query(
+      `
+      SELECT *
+      FROM applications
+      WHERE app_id =?
+      LIMIT 1`,
+      [app_id],
+    );
+
+    await conn.commit();
+
+    return {
+      message: "Application updated successfully",
+      app: updatedApp,
     };
   } catch (err) {
     await conn.rollback();
