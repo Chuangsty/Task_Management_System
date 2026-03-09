@@ -86,6 +86,8 @@ CREATE TABLE IF NOT EXISTS applications (
 
   project_lead INT NOT NULL, -- users.id with project lead role
   state_id INT NOT NULL DEFAULT 1, -- states.id ("on-going", "completed", but by default set to on-going)
+  
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
   next_task_no INT NOT NULL DEFAULT 1, -- per-app running number counter for task
   next_plan_no INT NOT NULL DEFAULT 1, -- per-app running number counter for plan

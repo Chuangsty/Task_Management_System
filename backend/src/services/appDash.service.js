@@ -1,7 +1,21 @@
 import { pool } from "../config/db.js";
 
 export async function listAppsService() {
-  const [rows] = await pool.query("SELECT * FROM applications");
+  const [rows] = await pool.query(
+    `SELECT
+      a.app_id,
+      a.app_name,
+      a.app_acronym,
+      a.app_startDate,
+      a.app_endDate,
+      a.app_description,
+      s.state_name AS state_id,
+      u.username AS project_lead
+    FROM applications a
+    JOIN states s ON s.id = a.state_id
+    JOIN users u ON u.id = a.project_lead
+    ORDER BY a.app_id DESC`,
+  );
   return rows;
 }
 
@@ -129,31 +143,6 @@ export async function updateAppsService({ app_id, app_startDate, app_endDate, ap
     throw err;
   }
 
-  // validate app dates
-  if (!app_startDate || !app_endDate) {
-    const err = new Error("Start and end dates are required");
-    err.status = 400;
-    throw err;
-  }
-  // get today's date in YYYY-MM-DD
-  const today = new Date().toISOString().split("T")[0];
-  // start date cannot be before current date
-  if (app_startDate < today) {
-    const err = new Error("Start date cannot be before current date");
-    err.status = 400;
-    throw err;
-  }
-  // end date cannot be before start date
-  if (app_startDate && app_endDate && app_startDate > app_endDate) {
-    const err = new Error("End date must be later than start date");
-    err.status = 400;
-    throw err;
-  }
-
-  // DEscription
-  const cleanDescription = app_description == null ? null : String(app_description).trim();
-  // == null -> IS condition, null -> FOR WHEN value if true, String... -> FOR WHEN value if false
-
   const conn = await pool.getConnection();
   try {
     await conn.beginTransaction();
@@ -172,23 +161,60 @@ export async function updateAppsService({ app_id, app_startDate, app_endDate, ap
       throw err;
     }
 
+    const updates = [];
+    const values = [];
+
+    if (app_startDate !== undefined) {
+      updates.push("app_startDate = ?");
+      values.push(app_startDate);
+    }
+
+    if (app_endDate !== undefined) {
+      const today = new Date().toISOString().split("T")[0];
+
+      if (app_endDate < today) {
+        const err = new Error("End date cannot be before current date");
+        err.status = 400;
+        throw err;
+      }
+
+      updates.push("app_endDate = ?");
+      values.push(app_endDate);
+    }
+
+    if (app_startDate > app_endDate) {
+      const err = new Error("Start date must be before end date");
+      err.status = 400;
+      throw err;
+    }
+
+    if (app_description !== undefined) {
+      const cleanDescription = app_description == null ? null : String(app_description).trim();
+
+      updates.push("app_description = ?");
+      values.push(cleanDescription);
+    }
+
+    // CAN IMPLEMENT CONTRAINTS TO INCLUDE PLANS START END DATE TO CONTAIN AND NOT BE CONTAINED.
+
+    if (updates.length === 0) {
+      const err = new Error("No fields provided to update");
+      err.status = 400;
+      throw err;
+    }
+
+    values.push(app_id);
+
     await conn.query(
       `
       UPDATE applications
-      SET app_startDate = ?, app_endDate = ?, app_description = ?
+      SET ${updates.join(", ")}
       WHERE app_id = ?
       `,
-      [app_startDate, app_endDate, cleanDescription, app_id],
+      values,
     );
 
-    const [[updatedApp]] = await conn.query(
-      `
-      SELECT *
-      FROM applications
-      WHERE app_id =?
-      LIMIT 1`,
-      [app_id],
-    );
+    const [[updatedApp]] = await conn.query(`SELECT * FROM applications WHERE app_id = ? LIMIT 1`, [app_id]);
 
     await conn.commit();
 
