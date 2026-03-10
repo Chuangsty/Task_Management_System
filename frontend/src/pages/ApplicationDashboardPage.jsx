@@ -204,7 +204,14 @@ export default function ApplicationsDashboardPage() {
                 <CardContent>
                   {/* Title row + edit icon */}
                   <div className="appItemTop">
-                    <Typography className="appTitle">{app.app_name || "Untitled Application"}</Typography>
+                    <Typography
+                      className="appTitle"
+                      // style={{ cursor: "pointer" }}
+                      sx={{ cursor: "pointer" }}
+                      onClick={() => nav(`/applications/${app.app_acronym}`, { state: { appName: app.app_name } })}
+                    >
+                      {app.app_name || "Untitled Application"}
+                    </Typography>
 
                     {isProjectLead ? (
                       <IconButton className="appEditBtn" size="small" onClick={() => openEditDialog(app)}>
@@ -239,7 +246,7 @@ export default function ApplicationsDashboardPage() {
         <DialogContent dividers>
           <TextField fullWidth margin="normal" label="Application Name" value={draft.app_name} onChange={(e) => setDraft((p) => ({ ...p, app_name: e.target.value }))} disabled={dialogMode === "edit"} />
 
-          <TextField fullWidth margin="normal" label="Start Date" type="date" value={draft.app_startDate} onChange={(e) => setDraft((p) => ({ ...p, app_startDate: e.target.value }))} InputLabelProps={{ shrink: true }} />
+          <TextField fullWidth margin="normal" label="Start Date" type="date" value={draft.app_startDate} onChange={(e) => setDraft((p) => ({ ...p, app_startDate: e.target.value }))} slotProps={{ inputLabel: { shrink: true } }} />
 
           <TextField fullWidth margin="normal" label="End Date" type="date" value={draft.app_endDate} onChange={(e) => setDraft((p) => ({ ...p, app_endDate: e.target.value }))} slotProps={{ inputLabel: { shrink: true } }} />
 

@@ -7,6 +7,7 @@ import HeaderBar from "./components/HeaderBar";
 import ProtectedRoute from "./components/ProtectedRoute.jsx";
 import UserManagementPage from "./pages/UserManagementPage.jsx";
 import ApplicationsDashboardPage from "./pages/ApplicationDashboardPage.jsx";
+import TaskDashboardPage from "./pages/TaskDashboardPage.jsx";
 
 const theme = createTheme({
   typography: { fontFamily: "Inter, system-ui, Arial, sans-serif" },
@@ -31,6 +32,7 @@ export default function App() {
         <Route element={<ProtectedRoute />}>
           <Route element={<HeaderBar />}>
             <Route path="/applications" index element={<ApplicationsDashboardPage />} />
+            <Route path="/applications/:appAcronym" index element={<TaskDashboardPage />} />
           </Route>
         </Route>
 

@@ -135,13 +135,11 @@ CREATE TABLE IF NOT EXISTS plans (
 
 -- Tasks table
 CREATE TABLE IF NOT EXISTS tasks (
-  app_acronym VARCHAR(20) NOT NULL,
 
+  task_id VARCHAR(50) PRIMARY KEY,
+
+  app_id INT NOT NULL,
   task_no INT NOT NULL, -- Running number inside each app
-
-  -- Your PK format: tms-1, tms-2 ...
-  task_id VARCHAR(50)
-    GENERATED ALWAYS AS (CONCAT(app_acronym, '-', task_no)) STORED,
 
   task_name VARCHAR(100) NOT NULL,
   task_description TEXT NULL,
@@ -151,22 +149,25 @@ CREATE TABLE IF NOT EXISTS tasks (
   plan_id VARCHAR(50) NULL,
 
   task_state_id INT NOT NULL DEFAULT 1,  -- task_states.id
+
+  creator INT NOT NULL,
   developer INT NULL,          -- users.id with developer role
 
   task_created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   task_taken_at TIMESTAMP NULL,
   task_update_at TIMESTAMP NULL,
 
-  PRIMARY KEY (task_id),
-  UNIQUE KEY uq_task_no_per_app (app_acronym, task_no),
+  UNIQUE KEY uq_task_no_per_app (app_id, task_no),
+  UNIQUE KEY uq_task_name_per_app (app_id, task_name),
 
-  KEY idx_tasks_app (app_acronym),
+  KEY idx_tasks_app_id (app_id),
   KEY idx_tasks_plan_id (plan_id),
   KEY idx_tasks_state (task_state_id),
+  KEY idx_tasks_creator (creator),
   KEY idx_tasks_dev (developer),
 
-  CONSTRAINT fk_tasks_app
-    FOREIGN KEY (app_acronym) REFERENCES applications(app_acronym),
+  CONSTRAINT fk_tasks_app_by_id
+    FOREIGN KEY (app_id) REFERENCES applications(app_id),
 
   -- UPDATED FK: tasks.plan_id -> plans.plan_id
   CONSTRAINT fk_tasks_plan_by_id
@@ -174,6 +175,9 @@ CREATE TABLE IF NOT EXISTS tasks (
 
   CONSTRAINT fk_tasks_task_state
     FOREIGN KEY (task_state_id) REFERENCES task_states(id),
+
+  CONSTRAINT fk_tasks_creator
+    FOREIGN KEY (creator) REFERENCES users(id),
 
   CONSTRAINT fk_tasks_developer
     FOREIGN KEY (developer) REFERENCES users(id)

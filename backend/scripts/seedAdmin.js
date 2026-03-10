@@ -5,7 +5,7 @@ import { pool } from "../src/config/db.js"; // MySQL connection pool
 dotenv.config();
 
 // Creating default admin credentials
-const ADMIN_USERNAME = process.env.SEED_ADMIN_USERNAME || "admin";
+const ADMIN_USERNAME = process.env.SEED_ADMIN_USERNAME || "Me";
 const ADMIN_EMAIL = process.env.SEED_ADMIN_EMAIL || "teochuangming3@gmail.com";
 const ADMIN_PASSWORD = process.env.SEED_ADMIN_PASSWORD || "Qwer1234!";
 

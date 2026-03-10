@@ -6,6 +6,7 @@ import cookieParser from "cookie-parser";
 import authRoutes from "./routes/auth.routes.js";
 import adminRoutes from "./routes/admin.routes.js";
 import appDashRoutes from "./routes/appDash.routes.js";
+import taskDashRoutes from "./routes/taskDash.routes.js";
 
 import { notFoundHandler, errorHandler } from "./middleware/error.middleware.js";
 
@@ -30,6 +31,7 @@ app.use(cookieParser()); // Enable cookie parser
 app.use("/api/auth", authRoutes);
 app.use("/api/admin", adminRoutes);
 app.use("/api/apps", appDashRoutes);
+app.use("/api", taskDashRoutes);
 
 // Quick health endpoint (useful to check server running on Postman)
 app.get("/api/health", (req, res) => {
@@ -41,6 +43,4 @@ app.use(notFoundHandler);
 app.use(errorHandler);
 
 const port = process.env.PORT || 3000;
-// app.listen(port, () => {
-// console.log(`Backend running at http://localhost:${port}`);});
 app.listen(port, () => console.log(`Backend running at http://localhost:${port}`));

@@ -2,10 +2,6 @@
   padding: 24px 40px;
 }
 
-/* .appsPageAlert {
-  margin-bottom: 12px;
-} */
-
 .appsCard {
   padding: 16px;
   border-radius: 16px !important;
@@ -21,11 +17,6 @@
   margin-bottom: 12px;
 }
 
-/* .appsTitle {
-  font-size: 26px !important;
-  font-weight: 900 !important;
-} */
-
 .appsNewAppBtn {
   border-radius: 999px !important;
   padding: 7px 14px !important;
@@ -35,14 +26,6 @@
 .appsNewAppBtnPlaceholder {
   width: 132px; /* keeps layout stable when button hidden */
 }
-
-/* Search row */
-/* .appsToolsRow {
-  display: flex;
-  align-items: center;
-  justify-content: flex-start;
-  margin-bottom: 14px;
-} */
 
 .appsSearch {
   width: 280px;
@@ -114,30 +97,6 @@
 .appItem .MuiCardContent-root {
   padding: 14px !important;
 }
-
-/* Bottom row */
-/* .appBottomRow {
-  display: flex;
-  align-items: center;
-  justify-content: flex-end;
-  gap: 14px;
-  margin-top: 10px;
-} */
-
-/* .appTasksTodo {
-  font-size: 12.5px !important;
-  color: #555;
-} */
-
-/* .appNewTaskBtn {
-  border-radius: 999px !important;
-  font-weight: 800 !important;
-  padding: 5px 12px !important;
-} */
-
-/* .appNewTaskBtnPlaceholder {
-  width: 122px; 
-} */
 
 .appsEmpty {
   padding: 28px;
