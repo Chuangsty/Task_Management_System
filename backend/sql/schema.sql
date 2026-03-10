@@ -101,37 +101,37 @@ CREATE TABLE IF NOT EXISTS applications (
 
 -- Plans table
 CREATE TABLE IF NOT EXISTS plans (
-  app_acronym VARCHAR(20) NOT NULL,
 
+  plan_id VARCHAR(50) PRIMARY KEY,
+
+  app_id INT NOT NULL,
   plan_no INT NOT NULL, -- running number inside each app
-
-  plan_id VARCHAR(50)
-    GENERATED ALWAYS AS (CONCAT(app_acronym, '-', plan_no)) STORED,
 
   plan_name VARCHAR(100) NOT NULL,
   plan_startDate DATE NOT NULL,
   plan_endDate DATE NOT NULL,
 
-  project_manager INT NOT NULL, -- users.id with project manager role
+  creator INT NOT NULL, -- users.id with project manager role
   state_id INT NOT NULL DEFAULT 1,
 
   PRIMARY KEY (plan_id),
 
-  UNIQUE KEY uq_plan_no_per_app (app_acronym, plan_no), -- prevent duplicate plan numbers within same app
-  UNIQUE KEY uq_plan_name_per_app (app_acronym, plan_name), -- prevent duplicate plan names within same app
+  UNIQUE KEY uq_task_no_per_app (app_id, task_no),
 
-  KEY idx_plans_app (app_acronym), -- index lookup
+  UNIQUE KEY uq_plan_no_per_app (app_id, plan_no), -- prevent duplicate plan numbers within same app
+  UNIQUE KEY uq_plan_name_per_app (app_id, plan_name), -- prevent duplicate plan names within same app
+
+  KEY idx_plans_app_id (app_id), -- index lookup
 
   CONSTRAINT fk_plans_app
-    FOREIGN KEY (app_acronym) REFERENCES applications(app_acronym),
+    FOREIGN KEY (app_id) REFERENCES applications(app_id),
 
   CONSTRAINT fk_plans_pm
-    FOREIGN KEY (project_manager) REFERENCES users(id),
+    FOREIGN KEY (creator) REFERENCES users(id),
 
   CONSTRAINT fk_plans_state
     FOREIGN KEY (state_id) REFERENCES states(id)
 );
-
 
 -- Tasks table
 CREATE TABLE IF NOT EXISTS tasks (
