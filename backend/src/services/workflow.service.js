@@ -2,7 +2,28 @@ import { pool } from "../config/db.js";
 
 // START helper functions ==============================
 
-// 1) retrieve task states
+// validate cleaned string value of required task id
+function requireTaskId(task_id) {
+  const cleanTaskId = String(task_id ?? "").trim();
+  if (cleanTaskId === "") {
+    const err = new Error("Task id is required");
+    err.status = 400;
+    throw err;
+  }
+  return cleanTaskId;
+}
+
+// timestamp for task note append(upon action)
+function makeTimestamp() {
+  return new Date().toLocaleString("sv-SE", { timeZone: "Asia/Singapore" });
+}
+
+// task note append(upon action)
+function appendNote(existingNote, line) {
+  return existingNote ? `${existingNote}\n${line}` : line;
+}
+
+// retrieve task states
 async function getTaskStateRow(conn, slug) {
   const [[taskState]] = await conn.query(
     `
@@ -21,7 +42,7 @@ async function getTaskStateRow(conn, slug) {
   return taskState;
 }
 
-// 2) retrieve app states
+// retrieve app states
 async function getAppStateRow(conn, slug) {
   const [[state]] = await conn.query(
     `
@@ -40,7 +61,7 @@ async function getAppStateRow(conn, slug) {
   return state;
 }
 
-// 3) retrieve user
+// retrieve user
 async function getUserRow(conn, userId) {
   const [[user]] = await conn.query(
     `
@@ -59,17 +80,7 @@ async function getUserRow(conn, userId) {
   return user;
 }
 
-// 4) timestamp for task note append(upon action)
-function makeTimestamp() {
-  return new Date().toLocaleString("sv-SE", { timeZone: "Asia/Singapore" });
-}
-
-// 5) task note append(upon action)
-function appendNote(existingNote, line) {
-  return existingNote ? `${existingNote}\n${line}` : line;
-}
-
-// 6) locks task row in db while transaction to prevent race condition
+// locks task row in db while transaction to prevent race condition
 async function getLockedTask(conn, task_id) {
   const [[task]] = await conn.query(
     `
@@ -80,6 +91,7 @@ async function getLockedTask(conn, task_id) {
             t.task_state_id,
             t.task_note,
             t.developer,
+            t.creator,
             ts.slug AS task_state_slug
         FROM tasks t
         JOIN task_states ts ON ts.id = t.task_state_id
@@ -97,7 +109,7 @@ async function getLockedTask(conn, task_id) {
   return task;
 }
 
-// 7) retrieve task details
+// retrieve task details
 async function readTaskDetails(conn, task_id) {
   const [[task]] = await conn.query(
     `
@@ -134,7 +146,7 @@ async function readTaskDetails(conn, task_id) {
   return task;
 }
 
-// 8) Update application state to complete upon all tasks complete
+// Update application state to complete upon all tasks complete
 async function updateApplicationCompletionState(conn, app_id) {
   const [[openTaskCountRow]] = await conn.query(
     `
@@ -176,28 +188,119 @@ async function updateApplicationCompletionState(conn, app_id) {
     );
   }
 }
-// 9) clean string value feature
-function cleanString(value) {
-  return String(value ?? "").trim();
-}
 
-// 10) application ownership check
-async function taskCreator(conn, task_id) {
-  const [[taskCreator]] = await conn.query(
-    `
-        SELECT task_id, creator
-        FROM tasks
-        WHERE task_id = ?
-        LIMIT 1
-        `,
-    [task_id],
-  );
-  if (!taskCreator) {
-    const err = new Error("Application not found");
-    err.status = 404;
+// task developer check
+async function taskDeveloper(task, actorUserId, actionText) {
+  if (!task.developer || Number(task.developer) !== Number(actorUserId)) {
+    const err = new Error(`You can only ${actionText} your own task`);
+    err.status = 403;
     throw err;
   }
-  return taskCreator;
+}
+
+// task creator check
+async function taskCreator(task, actorUserId, actionText) {
+  if (!task.creator || Number(task.creator) !== Number(actorUserId)) {
+    const err = new Error(`You can only ${actionText} tasks that you've created`);
+    err.status = 403;
+    throw err;
+  }
+}
+
+// task update helper
+async function updateTaskRow(conn, taskId, fields) {
+  // Object.entries() covnerts object into array of [key, value] pairs
+  const entries = Object.entries(fields);
+
+  if (entries.length === 0) return;
+
+  // convert fields into SQL assignments
+  // entries    -> entries = [["developer", 3],["task_state_id", 2],["task_note", "hello"]]
+  // map key    -> ["developer = ?","task_state_id = ?","task_note = ?"]
+  // join       -> "developer = ?, task_state_id = ?, task_note = ?"
+  // giving us  -> SET developer = ?, task_state_id = ?, task_note = ?
+  const setClause = entries.map(([key]) => `${key} = ?`).join(", ");
+  // entries    -> [["developer", 3],["task_state_id", 2],["task_note", "hello"]]
+  // map        -> values = [3, 2, "hello"]    -> replace ? placeholders in SQL
+  const values = entries.map(([, value]) => value);
+
+  await conn.query(
+    `
+    UPDATE tasks
+    SET ${setClause}
+    WHERE task_id = ?
+    `,
+    [...values, taskId],
+  );
+}
+
+// reusable workflow transition helper (IMPORTANT!! WHERE EVERYTHING WORKS)
+async function runTaskTransition({
+  task_id,
+  actorUserId,
+  targetStateSlug, // e.g. "DONE"
+  allowedCurrentState, // e.g. "DOING"
+  wrongStateMessage, // e.g. "Only TODO tasks can be taken"
+  validateTask,
+  buildUpdateFields,
+  buildNoteLine,
+  successMessage, // e.g. "a success message"
+}) {
+  const cleanTaskId = requireTaskId(task_id);
+  const conn = await pool.getConnection();
+
+  try {
+    await conn.beginTransaction();
+
+    const task = await getLockedTask(conn, cleanTaskId);
+    const actor = await getUserRow(conn, actorUserId);
+    const targetState = await getTaskStateRow(conn, targetStateSlug);
+
+    // state check
+    if (task.task_state_slug !== allowedCurrentState) {
+      const err = new Error(wrongStateMessage);
+      err.status = 400;
+      throw err;
+    }
+
+    // extra custom validation
+    if (validateTask) {
+      await validateTask({ conn, task, actor, actorUserId, cleanTaskId });
+    }
+
+    // append task note
+    const line = buildNoteLine({ task, actor, actorUserId, targetState });
+    const nextNote = appendNote(task.task_note, line);
+
+    // build update payload
+    const updateFields = buildUpdateFields({
+      task,
+      actor,
+      actorUserId,
+      targetState,
+      nextNote,
+    });
+
+    await updateTaskRow(conn, cleanTaskId, updateFields);
+
+    // re-check application completion state
+    await updateApplicationCompletionState(conn, task.app_id);
+
+    // fetch updated task
+    const updatedTask = await readTaskDetails(conn, cleanTaskId);
+
+    await conn.commit();
+
+    return {
+      message: successMessage,
+      task: updatedTask,
+    };
+  } catch (err) {
+    await conn.rollback();
+    throw err;
+  } finally {
+    conn.release();
+  }
 }
 
 // END helper functions ================================
@@ -205,357 +308,144 @@ async function taskCreator(conn, task_id) {
 // Developer actions =================================================
 // Take on task
 export async function takeTaskService({ task_id, actorUserId }) {
-  const cleanTaskId = cleanString(task_id);
-  if (cleanTaskId === "") {
-    const err = new Error("Task id is required");
-    err.status = 400;
-    throw err;
-  }
+  return runTaskTransition({
+    task_id,
+    actorUserId,
+    targetStateSlug: "DOING",
+    allowedCurrentState: "TODO",
+    wrongStateMessage: "Only TODO tasks can be taken",
 
-  const conn = await pool.getConnection();
-  try {
-    await conn.beginTransaction();
+    validateTask: async ({ task }) => {
+      // task plan check
+      if (!task.plan_id) {
+        const err = new Error("Only planned tasks can be taken");
+        err.status = 400;
+        throw err;
+      }
 
-    const task = await getLockedTask(conn, cleanTaskId);
-    const actor = await getUserRow(conn, actorUserId);
-    const doingState = await getTaskStateRow(conn, "DOING");
+      // task developer check
+      if (task.developer) {
+        const err = new Error("Task is already taken by a developer");
+        err.status = 409;
+        throw err;
+      }
+    },
 
-    // Task conditions ==============================================
-    // task plan check
-    if (!task.plan_id) {
-      const err = new Error("Only planned tasks can be taken");
-      err.status = 400;
-      throw err;
-    }
-    // task state to-do check
-    if (task.task_state_slug !== "TODO") {
-      const err = new Error("Only TODO tasks can be taken");
-      err.status = 400;
-      throw err;
-    }
-    // task developer check
-    if (task.developer) {
-      const err = new Error("Task is already taken by a developer");
-      err.status = 409;
-      throw err;
-    }
-    // End of task conditions =======================================
+    buildUpdateFields: ({ actor, targetState, nextNote }) => ({
+      developer: actor.id,
+      task_state_id: targetState.id,
+      task_taken_at: new Date(),
+      task_note: nextNote,
+    }),
 
-    // note for append
-    const line = `[ ${makeTimestamp()}, Task state: ${doingState.task_state_name} ] Developer ${actor.username} took task.`;
-    const nextNote = appendNote(task.task_note, line);
+    buildNoteLine: ({ actor, targetState }) => `[ ${makeTimestamp()}, Task state: ${targetState.task_state_name} ] Developer ${actor.username} took on the task.`,
 
-    // update task in db
-    await conn.query(
-      `
-        UPDATE tasks
-        SET
-            developer = ?,
-            task_state_id = ?,
-            task_taken_at = CURRENT_TIMESTAMP,
-            task_note = ?
-        WHERE task_id = ?
-        `,
-      [actorUserId, doingState.id, nextNote, cleanTaskId],
-    );
-
-    // check for application state update
-    await updateApplicationCompletionState(conn, task.app_id);
-
-    // retrieve updated task details
-    const updatedTask = await readTaskDetails(conn, cleanTaskId);
-    await conn.commit();
-
-    return {
-      message: "Task taken successfully",
-      task: updatedTask,
-    };
-  } catch (err) {
-    await conn.rollback();
-    throw err;
-  } finally {
-    conn.release();
-  }
+    successMessage: "Task taken successfully",
+  });
 }
 
 // Forfeit on task
 export async function forfeitTaskService({ task_id, actorUserId }) {
-  const cleanTaskId = cleanString(task_id);
-  if (cleanTaskId === "") {
-    const err = new Error("Task id is required");
-    err.status = 400;
-    throw err;
-  }
+  return runTaskTransition({
+    task_id,
+    actorUserId,
+    targetStateSlug: "TODO",
+    allowedCurrentState: "DOING",
+    wrongStateMessage: "Only DOING tasks can be forfeited",
 
-  const conn = await pool.getConnection();
+    validateTask: async ({ task, actorUserId }) => {
+      // task developer ownership validation
+      taskDeveloper(task, actorUserId, "forfeit");
+    },
 
-  try {
-    await conn.beginTransaction();
+    buildUpdateFields: ({ targetState, nextNote }) => ({
+      developer: null,
+      task_state_id: targetState.id,
+      task_taken_at: null,
+      task_note: nextNote,
+    }),
 
-    const task = await getLockedTask(conn, cleanTaskId);
-    const actor = await getUserRow(conn, actorUserId);
-    const todoState = await getTaskStateRow(conn, "TODO");
+    buildNoteLine: ({ actor, targetState }) => `[ ${makeTimestamp()}, Task state: ${targetState.task_state_name} ] Developer ${actor.username} forfeited the task.`,
 
-    // Task conditions ==============================================
-    // task state check
-    if (task.task_state_slug !== "DOING") {
-      const err = new Error("Only DOING tasks can be forfeited");
-      err.status = 400;
-      throw err;
-    }
-    // developer check
-    if (!task.developer || Number(task.developer) !== Number(actorUserId)) {
-      const err = new Error("You can only forfeit your own task");
-      err.status = 403;
-      throw err;
-    }
-    // End of task conditions =======================================
-
-    // note for append
-    const line = `[ ${makeTimestamp()}, Task state: ${todoState.task_state_name} ] Developer ${actor.username} forfeited task.`;
-    const nextNote = appendNote(task.task_note, line);
-
-    // update task in db
-    await conn.query(
-      `
-      UPDATE tasks
-      SET
-        developer = NULL,
-        task_state_id = ?,
-        task_update_at = CURRENT_TIMESTAMP,
-        task_note = ?
-      WHERE task_id = ?
-      `,
-      [todoState.id, nextNote, cleanTaskId],
-    );
-
-    // check for application completion
-    await updateApplicationCompletionState(conn, task.app_id);
-
-    // retrieve updated task details
-    const updatedTask = await readTaskDetails(conn, cleanTaskId);
-    await conn.commit();
-
-    return {
-      message: "Task forfeited successfully",
-      task: updatedTask,
-    };
-  } catch (err) {
-    await conn.rollback();
-    throw err;
-  } finally {
-    conn.release();
-  }
+    successMessage: "Task forfeited successfully",
+  });
 }
 
 // Submit task
 export async function submitTaskService({ task_id, actorUserId }) {
-  const cleanTaskId = cleanString(task_id);
-  if (cleanTaskId === "") {
-    const err = new Error("Task id is required");
-    err.status = 400;
-    throw err;
-  }
+  return runTaskTransition({
+    task_id,
+    actorUserId,
+    targetStateSlug: "DONE",
+    allowedCurrentState: "DOING",
+    wrongStateMessage: "Only DOING tasks can be submitted",
 
-  const conn = await pool.getConnection();
+    validateTask: async ({ task, actorUserId }) => {
+      // task developer ownership validation
+      taskDeveloper(task, actorUserId, "submit");
+    },
 
-  try {
-    await conn.beginTransaction();
+    buildUpdateFields: ({ actor, targetState, nextNote }) => ({
+      developer: actor.id,
+      task_state_id: targetState.id,
+      task_note: nextNote,
+    }),
 
-    const task = await getLockedTask(conn, cleanTaskId);
-    const actor = await getUserRow(conn, actorUserId);
-    const doneState = await getTaskStateRow(conn, "DONE");
+    buildNoteLine: ({ actor, targetState }) => `[ ${makeTimestamp()}, Task state: ${targetState.task_state_name} ] Developer ${actor.username} submitted the task for review.`,
 
-    // Task conditions ==============================================
-    // task state check
-    if (task.task_state_slug !== "DOING") {
-      const err = new Error("Only DOING tasks can be submitted");
-      err.status = 400;
-      throw err;
-    }
-    // developer check
-    if (!task.developer || Number(task.developer) !== Number(actorUserId)) {
-      const err = new Error("You can only submit your own task");
-      err.status = 403;
-      throw err;
-    }
-    // End of task conditions =======================================
-
-    // note for append
-    const line = `[ ${makeTimestamp()}, Task state: ${doneState.task_state_name} ] Developer ${actor.username} submitted task for review.`;
-    const nextNote = appendNote(task.task_note, line);
-
-    // update task in db
-    await conn.query(
-      `
-      UPDATE tasks
-      SET
-        task_state_id = ?,
-        task_update_at = CURRENT_TIMESTAMP,
-        task_note = ?
-      WHERE task_id = ?
-      `,
-      [doneState.id, nextNote, cleanTaskId],
-    );
-
-    // check for application completion
-    await updateApplicationCompletionState(conn, task.app_id);
-
-    // retrieve updated task details
-    const updatedTask = await readTaskDetails(conn, cleanTaskId);
-    await conn.commit();
-
-    return {
-      message: "Task submitted for review successfully",
-      task: updatedTask,
-    };
-  } catch (err) {
-    await conn.rollback();
-    throw err;
-  } finally {
-    conn.release();
-  }
+    successMessage: "Task submitted successfully",
+  });
 }
 // Developer actions end =============================================
 
 // Project Lead actions ==============================================
 // Reject task
 export async function rejectTaskService({ task_id, actorUserId }) {
-  const cleanTaskId = cleanString(task_id);
-  if (cleanTaskId === "") {
-    const err = new Error("Task id is required");
-    err.status = 400;
-    throw err;
-  }
+  return runTaskTransition({
+    task_id,
+    actorUserId,
+    targetStateSlug: "DOING",
+    allowedCurrentState: "DONE",
+    wrongStateMessage: "Only DONE tasks can be rejected",
 
-  const conn = await pool.getConnection();
+    validateTask: async ({ task, actorUserId }) => {
+      // task developer ownership validation
+      taskCreator(task, actorUserId, "reject");
+    },
 
-  try {
-    await conn.beginTransaction();
+    buildUpdateFields: ({ targetState, nextNote }) => ({
+      task_state_id: targetState.id,
+      task_note: nextNote,
+    }),
 
-    const task = await getLockedTask(conn, cleanTaskId);
-    const actor = await getUserRow(conn, actorUserId);
-    const taskcreator = await taskCreator(conn, cleanTaskId);
-    const doingState = await getTaskStateRow(conn, "DOING");
+    buildNoteLine: ({ actor, targetState }) => `[ ${makeTimestamp()}, Task state: ${targetState.task_state_name} ] Project Lead ${actor.username} reviewed task and rejected it.`,
 
-    // Task conditions ==============================================
-    // task state check
-    if (task.task_state_slug !== "DONE") {
-      const err = new Error("Only DONE tasks can be rejected");
-      err.status = 400;
-      throw err;
-    }
-    // project lead check taskOwnership
-    if (!taskcreator.creator || Number(taskcreator.creator) !== Number(actorUserId)) {
-      const err = new Error("You can only reject task that you've created");
-      err.status = 403;
-      throw err;
-    }
-    // End of task conditions =======================================
-
-    // note for append
-    const line = `[ ${makeTimestamp()}, Task state: ${doingState.task_state_name} ] Project Lead ${actor.username} reviewed task and rejected it.`;
-    const nextNote = appendNote(task.task_note, line);
-
-    // update task in db
-    await conn.query(
-      `
-      UPDATE tasks
-      SET
-        task_state_id = ?,
-        task_update_at = CURRENT_TIMESTAMP,
-        task_note = ?
-      WHERE task_id = ?
-      `,
-      [doingState.id, nextNote, cleanTaskId],
-    );
-
-    // check for application completion
-    await updateApplicationCompletionState(conn, task.app_id);
-
-    // retrieve updated task details
-    const updatedTask = await readTaskDetails(conn, cleanTaskId);
-    await conn.commit();
-
-    return {
-      message: "Task have been rejected",
-      task: updatedTask,
-    };
-  } catch (err) {
-    await conn.rollback();
-    throw err;
-  } finally {
-    conn.release();
-  }
+    successMessage: "Task has been rejected",
+  });
 }
 
 // Approve task
 export async function approveTaskService({ task_id, actorUserId }) {
-  const cleanTaskId = cleanString(task_id);
-  if (cleanTaskId === "") {
-    const err = new Error("Task id is required");
-    err.status = 400;
-    throw err;
-  }
+  return runTaskTransition({
+    task_id,
+    actorUserId,
+    targetStateSlug: "CLOSED",
+    allowedCurrentState: "DONE",
+    wrongStateMessage: "Only DONE tasks can be approved",
 
-  const conn = await pool.getConnection();
+    validateTask: async ({ task, actorUserId }) => {
+      // task developer ownership validation
+      taskCreator(task, actorUserId, "approve");
+    },
 
-  try {
-    await conn.beginTransaction();
+    buildUpdateFields: ({ targetState, nextNote }) => ({
+      task_state_id: targetState.id,
+      task_note: nextNote,
+    }),
 
-    const task = await getLockedTask(conn, cleanTaskId);
-    const actor = await getUserRow(conn, actorUserId);
-    const taskcreator = await taskCreator(conn, cleanTaskId);
-    const closeState = await getTaskStateRow(conn, "CLOSED");
+    buildNoteLine: ({ actor, targetState }) => `[ ${makeTimestamp()}, Task state: ${targetState.task_state_name} ] Project Lead ${actor.username} reviewed task and approved it.`,
 
-    // Task conditions ==============================================
-    // task state check
-    if (task.task_state_slug !== "DONE") {
-      const err = new Error("Only DONE tasks can be approve");
-      err.status = 400;
-      throw err;
-    }
-    // project lead check taskOwnership
-    if (!taskcreator.creator || Number(taskcreator.creator) !== Number(actorUserId)) {
-      const err = new Error("You can only approve task that you've created");
-      err.status = 403;
-      throw err;
-    }
-    // End of task conditions =======================================
-
-    // note for append
-    const line = `[ ${makeTimestamp()}, Task state: ${closeState.task_state_name} ] Project Lead ${actor.username} reviewed task and approved it.`;
-    const nextNote = appendNote(task.task_note, line);
-
-    // update task in db
-    await conn.query(
-      `
-      UPDATE tasks
-      SET
-        task_state_id = ?,
-        task_update_at = CURRENT_TIMESTAMP,
-        task_note = ?
-      WHERE task_id = ?
-      `,
-      [closeState.id, nextNote, cleanTaskId],
-    );
-
-    // check for application completion
-    await updateApplicationCompletionState(conn, task.app_id);
-
-    // retrieve updated task details
-    const updatedTask = await readTaskDetails(conn, cleanTaskId);
-    await conn.commit();
-
-    return {
-      message: "Task have been approved",
-      task: updatedTask,
-    };
-  } catch (err) {
-    await conn.rollback();
-    throw err;
-  } finally {
-    conn.release();
-  }
+    successMessage: "Task has been approved",
+  });
 }
 // Project Lead actions end ==========================================
