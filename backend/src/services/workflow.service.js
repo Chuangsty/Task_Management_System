@@ -1,7 +1,6 @@
 import { pool } from "../config/db.js";
 
 // START helper functions ==============================
-
 // validate cleaned string value of required task id
 function requireTaskId(task_id) {
   const cleanTaskId = String(task_id ?? "").trim();
@@ -233,6 +232,7 @@ async function updateTaskRow(conn, taskId, fields) {
     [...values, taskId],
   );
 }
+// END helper functions ================================
 
 // reusable workflow transition helper (IMPORTANT!! WHERE EVERYTHING WORKS)
 async function runTaskTransition({
@@ -302,8 +302,6 @@ async function runTaskTransition({
     conn.release();
   }
 }
-
-// END helper functions ================================
 
 // Developer actions =================================================
 // Take on task
