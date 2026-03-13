@@ -38,13 +38,15 @@ async function getAppByAcronymForUpdate(conn, cleanAcronym) {
   const [[app]] = await conn.query(
     `
     SELECT
-      app_id,
-      app_acronym,
-      app_startDate,
-      app_endDate,
-      next_task_no,
-      next_plan_no
-    FROM applications
+      a.app_id,
+      a.app_acronym,
+      a.app_startDate,
+      a.app_endDate,
+      a.next_task_no,
+      a.next_plan_no,
+      s.slug AS app_state_slug
+    FROM applications a
+    JOIN states s ON s.id = a.state_id
     WHERE app_acronym = ?
     LIMIT 1
     FOR UPDATE
@@ -57,6 +59,24 @@ async function getAppByAcronymForUpdate(conn, cleanAcronym) {
     throw err;
   }
   return app;
+}
+
+// check for application completion
+function ensureAppNotCompleted(app) {
+  if (app.app_state_slug === "COMPLETED") {
+    const err = new Error("Unable to modify completed application");
+    err.status = 400;
+    throw err;
+  }
+}
+
+// check for task completion
+function ensureTaskNotClosed(existingTask) {
+  if (existingTask.task_state_slug === "CLOSED") {
+    const err = new Error("Closed tasks cannot be updated");
+    err.status = 400;
+    throw err;
+  }
 }
 
 // get task state
@@ -139,6 +159,9 @@ export async function createTaskService({ app_acronym, task_name, task_descripti
     await conn.beginTransaction();
 
     const app = await getAppByAcronymForUpdate(conn, cleanAcronym);
+
+    // 1) check for application completion state
+    ensureAppNotCompleted(app);
 
     // 2) Check task name unique per app
     const [[t]] = await conn.query("SELECT task_name FROM tasks WHERE app_id = ? AND task_name = ? LIMIT 1", [app.app_id, cleanTaskName]);
@@ -273,8 +296,10 @@ export async function updateTaskService({ task_id, task_description, actorUserId
       SELECT
         t.task_id,
         t.task_description,
-        t.task_note
+        t.task_note,
+        ts.slug AS task_state_slug
       FROM tasks t
+      JOIN task_states ts ON ts.id = t.task_state_id
       WHERE t.task_id = ?
       LIMIT 1
       FOR UPDATE
@@ -287,6 +312,9 @@ export async function updateTaskService({ task_id, task_description, actorUserId
       err.status = 404;
       throw err;
     }
+
+    // check for task completion
+    ensureTaskNotClosed(existingTask);
 
     // 2) build appended note
     // get actor username
@@ -395,8 +423,11 @@ export async function createPlanService({ app_acronym, plan_name, plan_startDate
     // Start of validations ===========================================
 
     // 1) Lock application row
-
     const app = await getAppByAcronymForUpdate(conn, cleanAcronym);
+
+    // check for application completion state
+    ensureAppNotCompleted(app);
+
     const app_id = app.app_id;
 
     const cleanPlanStart = String(plan_startDate).slice(0, 10);

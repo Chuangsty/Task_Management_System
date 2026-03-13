@@ -281,6 +281,7 @@ async function runTaskTransition({
       nextNote,
     });
 
+    // update task fields
     await updateTaskRow(conn, cleanTaskId, updateFields);
 
     // re-check application completion state
