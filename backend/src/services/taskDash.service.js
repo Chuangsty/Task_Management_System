@@ -42,8 +42,8 @@ async function getAppByAcronymForUpdate(conn, cleanAcronym) {
       a.app_acronym,
       a.app_startDate,
       a.app_endDate,
-      a.next_task_no,
-      a.next_plan_no,
+      a.Rnumber_task,
+      a.Rnumber_plan,
       s.slug AS app_state_slug
     FROM applications a
     JOIN states s ON s.id = a.state_id
@@ -175,7 +175,7 @@ export async function createTaskService({ app_acronym, task_name, task_descripti
     const openState = await getTaskStateRow(conn, "OPEN");
 
     // 4) generate task number + task id
-    const task_no = app.next_task_no; // running num
+    const task_no = app.Rnumber_task + 1; // running num
     const task_id = `${app.app_acronym}-${task_no}`; // app acronym with running num for primary unique key
 
     // 5) initial task note
@@ -220,11 +220,11 @@ export async function createTaskService({ app_acronym, task_name, task_descripti
       [task_id, app.app_id, task_no, cleanTaskName, cleanTaskDescription, initialNote, openState.id, actorUserId],
     );
 
-    // 7) increment app next_task_no
+    // 7) increment app Rnumber_task
     await conn.query(
       `
             UPDATE applications
-            SET next_task_no = next_task_no + 1
+            SET Rnumber_task = Rnumber_task + 1
             WHERE app_id = ?
             `,
       [app.app_id],
@@ -520,7 +520,7 @@ export async function createPlanService({ app_acronym, plan_name, plan_startDate
     // End of validations =============================================
 
     // 1) Generate plan number and plan id
-    const plan_no = app.next_plan_no;
+    const plan_no = app.Rnumber_plan + 1;
     const plan_id = `${app.app_acronym}-${plan_no}`;
 
     await conn.query(
@@ -580,11 +580,11 @@ export async function createPlanService({ app_acronym, plan_name, plan_startDate
       );
     }
 
-    // 4) Increase next_plan_no
+    // 4) Increase Rnumber_plan
     await conn.query(
       `
       UPDATE applications
-      SET next_plan_no = next_plan_no + 1
+      SET Rnumber_plan = Rnumber_plan + 1
       WHERE app_id = ?
       `,
       [app_id],

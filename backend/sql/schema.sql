@@ -88,8 +88,8 @@ CREATE TABLE IF NOT EXISTS applications (
   project_lead INT NOT NULL, -- users.id with project lead role
   state_id INT NOT NULL DEFAULT 1, -- states.id ("on-going", "completed", but by default set to on-going)
 
-  next_task_no INT NOT NULL DEFAULT 1, -- per-app running number counter for task
-  next_plan_no INT NOT NULL DEFAULT 1, -- per-app running number counter for plan
+  Rnumber_task INT NOT NULL DEFAULT 0, -- per-app running number counter for task
+  Rnumber_plan INT NOT NULL DEFAULT 0, -- per-app running number counter for plan
 
   CONSTRAINT fk_app_project_lead
     FOREIGN KEY (project_lead) REFERENCES users(id),
