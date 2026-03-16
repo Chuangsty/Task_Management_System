@@ -1,4 +1,5 @@
 import { pool } from "../config/db.js";
+import { sendTaskForReviewEmail } from "../utils/mailer.js";
 
 // START helper functions ==============================
 // validate cleaned string value of required task id
@@ -189,7 +190,7 @@ async function updateApplicationCompletionState(conn, app_id) {
 }
 
 // task developer check
-async function taskDeveloper(task, actorUserId, actionText) {
+function taskDeveloper(task, actorUserId, actionText) {
   if (!task.developer || Number(task.developer) !== Number(actorUserId)) {
     const err = new Error(`You can only ${actionText} your own task`);
     err.status = 403;
@@ -198,7 +199,7 @@ async function taskDeveloper(task, actorUserId, actionText) {
 }
 
 // task creator check
-async function taskCreator(task, actorUserId, actionText) {
+function taskCreator(task, actorUserId, actionText) {
   if (!task.creator || Number(task.creator) !== Number(actorUserId)) {
     const err = new Error(`You can only ${actionText} tasks that you've created`);
     err.status = 403;
@@ -232,6 +233,33 @@ async function updateTaskRow(conn, taskId, fields) {
     [...values, taskId],
   );
 }
+
+// project lead email helper
+async function getProjectLeadNotificationInfo(task_id) {
+  const [[row]] = await pool.query(
+    `
+    SELECT 
+      u.email AS project_lead_email,
+      u.username AS project_lead_username,
+      t.task_id,
+      t.task_name,
+      p.plan_name
+    FROM tasks t
+    JOIN applications a ON a.app_id = t.app_id
+    JOIN users u ON u.id = a.project_lead
+    LEFT JOIN plans p ON p.plan_id = t.plan_id
+    WHERE t.task_id = ?
+    LIMIT 1
+    `,
+    [task_id],
+  );
+  if (!row) {
+    const err = new Error("Project lead notification info not found");
+    err.status = 500;
+    throw err;
+  }
+  return row;
+}
 // END helper functions ================================
 
 // reusable workflow transition helper (IMPORTANT!! WHERE EVERYTHING WORKS)
@@ -245,6 +273,7 @@ async function runTaskTransition({
   buildUpdateFields,
   buildNoteLine,
   successMessage, // e.g. "a success message"
+  afterCommit,
 }) {
   const cleanTaskId = requireTaskId(task_id);
   const conn = await pool.getConnection();
@@ -291,6 +320,21 @@ async function runTaskTransition({
     const updatedTask = await readTaskDetails(conn, cleanTaskId);
 
     await conn.commit();
+
+    if (afterCommit) {
+      try {
+        await afterCommit({
+          task,
+          actor,
+          actorUserId,
+          cleanTaskId,
+          targetState,
+          updatedTask,
+        });
+      } catch (emailErr) {
+        console.error("Post-commit action failed:", emailErr.message);
+      }
+    }
 
     return {
       message: successMessage,
@@ -392,7 +436,23 @@ export async function submitTaskService({ task_id, actorUserId }) {
 
     buildNoteLine: ({ actor, targetState }) => `[ ${makeTimestamp()}, Task state: ${targetState.task_state_name} ] Developer ${actor.username} submitted the task for review.`,
 
-    successMessage: "Task submitted successfully",
+    successMessage: "Task submitted successfully. Email notification queued.",
+
+    // node mailer
+    afterCommit: async ({ cleanTaskId, actor, updatedTask }) => {
+      const info = await getProjectLeadNotificationInfo(cleanTaskId);
+
+      if (!info.project_lead_email) return;
+
+      await sendTaskForReviewEmail({
+        to: info.project_lead_email,
+        projectLeadName: info.project_lead_username,
+        developerName: actor.username,
+        taskId: info.task_id,
+        taskName: info.task_name || updatedTask.task_name,
+        planName: info.plan_name,
+      });
+    },
   });
 }
 // Developer actions end =============================================
