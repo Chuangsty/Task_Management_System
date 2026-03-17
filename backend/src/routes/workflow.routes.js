@@ -1,22 +1,22 @@
 import { Router } from "express";
 import { requireAuth } from "../middleware/auth.middleware.js";
-import { requireRole } from "../middleware/role.middleware.js";
 import { takeTaskController, forfeitTaskController, submitTaskController, rejectTaskController, approveTaskController } from "../controllers/workflow.controller.js";
+import { requireTaskPermit } from "../middleware/permit.middleware.js";
 
 const router = Router();
 
 // Developer workflow
 // POST api/tasks/:taskId/take
-router.post("/tasks/:taskId/take", requireAuth, requireRole("DEVELOPER"), takeTaskController);
+router.post("/tasks/:taskId/take", requireAuth, requireTaskPermit("permit_Doing"), takeTaskController);
 // POST api/tasks/:taskId/forfeit
-router.post("/tasks/:taskId/forfeit", requireAuth, requireRole("DEVELOPER"), forfeitTaskController);
+router.post("/tasks/:taskId/forfeit", requireAuth, forfeitTaskController);
 // POST api/tasks/:taskId/submit
-router.post("/tasks/:taskId/submit", requireAuth, requireRole("DEVELOPER"), submitTaskController);
+router.post("/tasks/:taskId/submit", requireAuth, requireTaskPermit("permit_Done"), submitTaskController);
 
 // Project Lead workflow
 // POST api/tasks/:taskId/reject
-router.post("/tasks/:taskId/reject", requireAuth, requireRole("PROJECT_LEAD"), rejectTaskController);
+router.post("/tasks/:taskId/reject", requireAuth, rejectTaskController);
 // POST api/tasks/:taskId/approve
-router.post("/tasks/:taskId/approve", requireAuth, requireRole("PROJECT_LEAD"), approveTaskController);
+router.post("/tasks/:taskId/approve", requireAuth, approveTaskController);
 
 export default router;

@@ -91,11 +91,25 @@ CREATE TABLE IF NOT EXISTS applications (
   Rnumber_task INT NOT NULL DEFAULT 0, -- per-app running number counter for task
   Rnumber_plan INT NOT NULL DEFAULT 0, -- per-app running number counter for plan
 
+  permit_Open VARCHAR(50) NOT NULL,
+  permit_toDo VARCHAR(50) NOT NULL,
+  permit_Doing VARCHAR(50) NOT NULL,
+  permit_Done VARCHAR(50) NOT NULL,
+
   CONSTRAINT fk_app_project_lead
     FOREIGN KEY (project_lead) REFERENCES users(id),
 
   CONSTRAINT fk_app_state
-    FOREIGN KEY (state_id) REFERENCES states(id)
+    FOREIGN KEY (state_id) REFERENCES states(id),
+
+  CONSTRAINT fk_permit_Open_roles
+    FOREIGN KEY (permit_Open) REFERENCES roles(slug),
+  CONSTRAINT fk_permit_toDo_roles
+    FOREIGN KEY (permit_toDo) REFERENCES roles(slug),
+  CONSTRAINT fk_permit_Doing_roles
+    FOREIGN KEY (permit_Doing) REFERENCES roles(slug),
+  CONSTRAINT fk_permit_Done_roles
+    FOREIGN KEY (permit_Done) REFERENCES roles(slug)
 );
 
 -- Plans table

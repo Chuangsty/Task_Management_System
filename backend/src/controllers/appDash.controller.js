@@ -11,8 +11,8 @@ export async function listAppsController(req, res) {
 
 export async function createAppsController(req, res, next) {
   try {
-    const { app_name, app_startDate, app_endDate, app_description } = req.body;
-    const apps = await createAppsService({ app_name, app_startDate, app_endDate, app_description, actorUserId: req.user.id });
+    const { app_name, app_startDate, app_endDate, app_description, permit_Open, permit_toDo, permit_Doing, permit_Done } = req.body;
+    const apps = await createAppsService({ app_name, app_startDate, app_endDate, app_description, actorUserId: req.user.id, permit_Open, permit_toDo, permit_Doing, permit_Done });
 
     res.json(apps);
   } catch (err) {
@@ -23,8 +23,8 @@ export async function createAppsController(req, res, next) {
 export async function updateAppsController(req, res, next) {
   try {
     const app_acronym = req.params.appAcronym;
-    const { app_startDate, app_endDate, app_description } = req.body;
-    const result = await updateAppsService({ app_acronym, app_startDate, app_endDate, app_description });
+    const { app_startDate, app_endDate, app_description, permit_Open, permit_toDo, permit_Doing, permit_Done } = req.body;
+    const result = await updateAppsService({ app_acronym, app_startDate, app_endDate, app_description, actorUserId: req.user.id, permit_Open, permit_toDo, permit_Doing, permit_Done });
 
     res.json(result);
   } catch (err) {

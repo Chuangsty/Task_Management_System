@@ -359,17 +359,17 @@ export async function takeTaskService({ task_id, actorUserId }) {
     wrongStateMessage: "Only TODO tasks can be taken",
 
     validateTask: async ({ task }) => {
-      // task plan check
-      if (!task.plan_id) {
-        const err = new Error("Only planned tasks can be taken");
-        err.status = 400;
-        throw err;
-      }
-
       // task developer check
       if (task.developer) {
         const err = new Error("Task is already taken by a developer");
         err.status = 409;
+        throw err;
+      }
+
+      // task plan check
+      if (!task.plan_id) {
+        const err = new Error("Only planned tasks can be taken");
+        err.status = 400;
         throw err;
       }
     },

@@ -44,6 +44,7 @@ async function getAppByAcronymForUpdate(conn, cleanAcronym) {
       a.app_endDate,
       a.Rnumber_task,
       a.Rnumber_plan,
+      a.project_lead,
       s.slug AS app_state_slug
     FROM applications a
     JOIN states s ON s.id = a.state_id
@@ -162,6 +163,13 @@ export async function createTaskService({ app_acronym, task_name, task_descripti
 
     // 1) check for application completion state
     ensureAppNotCompleted(app);
+
+    // check for application owndership
+    if (Number(app.project_lead) !== Number(actorUserId)) {
+      const err = new Error("You can only create task in applications that you created");
+      err.status = 403;
+      throw err;
+    }
 
     // 2) Check task name unique per app
     const [[t]] = await conn.query("SELECT task_name FROM tasks WHERE app_id = ? AND task_name = ? LIMIT 1", [app.app_id, cleanTaskName]);

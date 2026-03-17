@@ -10,6 +10,10 @@ export async function listAppsService() {
       a.app_startDate,
       a.app_endDate,
       a.app_description,
+      a.permit_Open,
+      a.permit_toDo,
+      a.permit_Doing,
+      a.permit_Done,
       s.state_name AS state_name,
       u.username AS project_lead
     FROM applications a
@@ -20,7 +24,7 @@ export async function listAppsService() {
   return rows;
 }
 
-export async function createAppsService({ app_name, app_startDate, app_endDate, app_description, actorUserId }) {
+export async function createAppsService({ app_name, app_startDate, app_endDate, app_description, actorUserId, permit_Open, permit_toDo, permit_Doing, permit_Done }) {
   // validate app name
   if (!app_name || String(app_name).trim() === "") {
     const err = new Error("Application name is required");
@@ -48,6 +52,19 @@ export async function createAppsService({ app_name, app_startDate, app_endDate, 
     err.status = 400;
     throw err;
   }
+
+  // normalize permits
+  const cleanPermitOpen = String(permit_Open).trim();
+  const cleanPermitToDo = String(permit_toDo).trim();
+  const cleanPermitDoing = String(permit_Doing).trim();
+  const cleanPermitDone = String(permit_Done).trim();
+  // validate permits
+  if (!cleanPermitOpen || !cleanPermitToDo || !cleanPermitDoing || !cleanPermitDone) {
+    const err = new Error("Permits are required");
+    err.status = 400;
+    throw err;
+  }
+  const permitRoles = [cleanPermitOpen, cleanPermitToDo, cleanPermitDoing, cleanPermitDone];
 
   // normalize application name and description
   const cleanName = String(app_name).trim();
@@ -104,13 +121,30 @@ export async function createAppsService({ app_name, app_startDate, app_endDate, 
     // Application acronym generation can be tweaked if desired in the future
     // End of application acronym generation ========================================
 
+    // validate against roles table
+    const [dbRoles] = await conn.query(
+      `
+      SELECT slug
+      FROM roles
+      `,
+    );
+    // turn DB rows into a Set of valid role slugs
+    const validRoleSlugs = new Set(dbRoles.map((r) => r.slug));
+    // find which submitted permits are invalid
+    const invalidPermits = permitRoles.filter((role) => !validRoleSlugs.has(role));
+    if (invalidPermits.length > 0) {
+      const err = new Error(`Invalid permit role(s): ${invalidPermits.join(", ")}`);
+      err.status = 400;
+      throw err;
+    }
+
     const [result] = await conn.query(
       `
       INSERT INTO applications
-      (app_name, app_acronym, state_id, project_lead, app_startDate, app_endDate, app_description)
-      VALUES (?, ?, ?, ?, ?, ?, ?)
+      (app_name, app_acronym, state_id, project_lead, app_startDate, app_endDate, app_description, permit_Open, permit_toDo, permit_Doing, permit_Done)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `,
-      [cleanName, finalAcronym, stateRow.id, actorUserId, app_startDate, app_endDate, app_description],
+      [cleanName, finalAcronym, stateRow.id, actorUserId, app_startDate, app_endDate, cleanDescription, cleanPermitOpen, cleanPermitToDo, cleanPermitDoing, cleanPermitDone],
     );
 
     const [[newApp]] = await conn.query(
@@ -123,6 +157,10 @@ export async function createAppsService({ app_name, app_startDate, app_endDate, 
         a.app_startDate,
         a.app_endDate,
         a.app_description,
+        a.permit_Open,
+        a.permit_toDo,
+        a.permit_Doing,
+        a.permit_Done,
         s.state_name AS state_name,
         u.username AS project_lead
       FROM applications a
@@ -148,7 +186,7 @@ export async function createAppsService({ app_name, app_startDate, app_endDate, 
   }
 }
 
-export async function updateAppsService({ app_acronym, app_id, app_startDate, app_endDate, app_description }) {
+export async function updateAppsService({ app_acronym, app_id, app_startDate, app_endDate, app_description, actorUserId, permit_Open, permit_toDo, permit_Doing, permit_Done }) {
   const cleanAcronym = String(app_acronym ?? "")
     .trim()
     .toUpperCase();
@@ -174,6 +212,12 @@ export async function updateAppsService({ app_acronym, app_id, app_startDate, ap
     if (!app) {
       const err = new Error("Application not found");
       err.status = 404;
+      throw err;
+    }
+
+    if (Number(app.project_lead) !== Number(actorUserId)) {
+      const err = new Error("You can only update applications that you created");
+      err.status = 403;
       throw err;
     }
 
