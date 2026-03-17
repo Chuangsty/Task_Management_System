@@ -1,5 +1,20 @@
 import { pool } from "../config/db.js";
 
+function toTitleCase(str) {
+  const special = ["API", "AI", "UI"];
+
+  return str
+    .toLowerCase()
+    .split(/\s+/)
+    .filter(Boolean)
+    .map((word) => {
+      const upper = word.toUpperCase();
+      if (special.includes(upper)) return upper;
+      return word[0].toUpperCase() + word.slice(1);
+    })
+    .join(" ");
+}
+
 export async function listAppsService() {
   const [rows] = await pool.query(
     `SELECT
@@ -67,7 +82,7 @@ export async function createAppsService({ app_name, app_startDate, app_endDate, 
   const permitRoles = [cleanPermitOpen, cleanPermitToDo, cleanPermitDoing, cleanPermitDone];
 
   // normalize application name and description
-  const cleanName = String(app_name).trim();
+  const cleanName = toTitleCase(String(app_name).trim());
   // == null -> IS condition, null -> FOR WHEN value if true, String... -> FOR WHEN value if false
   const cleanDescription = app_description == null ? null : String(app_description).trim();
 
@@ -202,7 +217,7 @@ export async function updateAppsService({ app_acronym, app_id, app_startDate, ap
     await conn.beginTransaction();
 
     const [[app]] = await conn.query(
-      `SELECT app_id
+      `SELECT app_id, project_lead
        FROM applications
        WHERE app_acronym = ?
        LIMIT 1`,
@@ -274,7 +289,7 @@ export async function updateAppsService({ app_acronym, app_id, app_startDate, ap
       values,
     );
 
-    const [[updatedApp]] = await conn.query(`SELECT * FROM applications WHERE app_id = ? LIMIT 1`, [app_id]);
+    const [[updatedApp]] = await conn.query(`SELECT * FROM applications WHERE app_id = ? LIMIT 1`, [app.app_id]);
 
     await conn.commit();
 

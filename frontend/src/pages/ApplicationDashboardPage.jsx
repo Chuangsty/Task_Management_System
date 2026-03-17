@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { useNavigate, useOutletContext } from "react-router-dom";
-import { Alert, Button, Card, CardContent, Container, Dialog, DialogActions, DialogContent, DialogTitle, IconButton, InputAdornment, Paper, Snackbar, TextField, Typography } from "@mui/material";
+import { Alert, Box, Button, Card, CardContent, Container, Dialog, DialogActions, DialogContent, DialogTitle, FormControl, IconButton, InputAdornment, InputLabel, MenuItem, Paper, Select, Snackbar, TextField, Typography } from "@mui/material";
 
 import AddIcon from "@mui/icons-material/Add";
 import EditIcon from "@mui/icons-material/Edit";
@@ -25,11 +25,18 @@ export default function ApplicationsDashboardPage() {
   const [dialogMode, setDialogMode] = useState("create"); // "create" | "edit"
   const [selectedApp, setSelectedApp] = useState(null);
 
+  // dialog for permission roles selection
+  const [roleOptions, setRoleOptions] = useState([]);
+
   const [draft, setDraft] = useState({
     app_name: "",
     app_startDate: "",
     app_endDate: "",
     app_description: "",
+    permit_Open: "",
+    permit_toDo: "",
+    permit_Doing: "",
+    permit_Done: "",
   });
 
   const [submitting, setSubmitting] = useState(false);
@@ -42,6 +49,7 @@ export default function ApplicationsDashboardPage() {
 
   useEffect(() => {
     loadApps();
+    loadRoles();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -56,6 +64,10 @@ export default function ApplicationsDashboardPage() {
       app_startDate: "",
       app_endDate: "",
       app_description: "",
+      permit_Open: "",
+      permit_toDo: "",
+      permit_Doing: "",
+      permit_Done: "",
     });
     setDialogOpen(true);
   }
@@ -68,6 +80,10 @@ export default function ApplicationsDashboardPage() {
       app_startDate: app.app_startDate ? String(app.app_startDate).slice(0, 10) : "",
       app_endDate: app.app_endDate ? String(app.app_endDate).slice(0, 10) : "",
       app_description: app.app_description || "",
+      permit_Open: app.permit_Open || "",
+      permit_toDo: app.permit_toDo || "",
+      permit_Doing: app.permit_Doing || "",
+      permit_Done: app.permit_Done || "",
     });
     setDialogOpen(true);
   }
@@ -87,11 +103,24 @@ export default function ApplicationsDashboardPage() {
       setApps(appsRes.data ?? []);
     } catch (err) {
       const code = err?.response?.status;
-      if (code === 401) nav("/login", { replace: true });
-      else if (code === 403) nav("/applications", { replace: true });
-      else setErrMsg(err?.response?.data?.error || "Failed to load applications");
+      if (code === 401) {
+        nav("/login", { replace: true });
+      } else {
+        setErrMsg(err?.response?.data?.error || "Failed to load applications");
+      }
     } finally {
       setLoading(false);
+    }
+  }
+
+  async function loadRoles() {
+    try {
+      const res = await api.get("/api/roles");
+      console.log("roles response:", res.data);
+      setRoleOptions(res.data ?? []);
+    } catch {
+      console.error("Failed to load roles:");
+      setRoleOptions([]);
     }
   }
 
@@ -106,24 +135,33 @@ export default function ApplicationsDashboardPage() {
               app_startDate: draft.app_startDate,
               app_endDate: draft.app_endDate,
               app_description: draft.app_description.trim(),
+              permit_Open: draft.permit_Open.trim(),
+              permit_toDo: draft.permit_toDo.trim(),
+              permit_Doing: draft.permit_Doing.trim(),
+              permit_Done: draft.permit_Done.trim(),
             }
           : {
               app_startDate: draft.app_startDate,
               app_endDate: draft.app_endDate,
               app_description: draft.app_description.trim(),
+              permit_Open: draft.permit_Open.trim(),
+              permit_toDo: draft.permit_toDo.trim(),
+              permit_Doing: draft.permit_Doing.trim(),
+              permit_Done: draft.permit_Done.trim(),
             };
 
       if (dialogMode === "create") {
         await api.post("/api/apps", payload);
         setToast({ open: true, severity: "success", msg: "Application created" });
       } else {
-        await api.patch(`/api/apps/${selectedApp.app_id}`, payload);
+        await api.patch(`/api/apps/${selectedApp.app_acronym}`, payload);
         setToast({ open: true, severity: "success", msg: "Application updated" });
       }
 
       closeDialog();
       await loadApps();
     } catch (err) {
+      console.log(err?.response?.status, err?.response?.data);
       setToast({
         open: true,
         severity: "error",
@@ -167,7 +205,7 @@ export default function ApplicationsDashboardPage() {
         <div className="appsTopRow">
           <TextField
             size="small"
-            placeholder="Application"
+            placeholder="Search"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             className="appsSearch"
@@ -222,7 +260,7 @@ export default function ApplicationsDashboardPage() {
 
                   {/* Meta row */}
                   <div className="appMetaRow">
-                    <span className="appMetaItem">Status: {app.state_id || "N/A"}</span>
+                    <span className="appMetaItem">Status: {app.state_name || "N/A"}</span>
                     <span className="appMetaSep">|</span>
                     <span className="appMetaItem">Project Lead: {app.project_lead || "N/A"}</span>
                     <span className="appMetaSep">|</span>
@@ -244,13 +282,58 @@ export default function ApplicationsDashboardPage() {
         <DialogTitle>{dialogMode === "create" ? "Create Application" : "Edit Application"}</DialogTitle>
 
         <DialogContent dividers>
-          <TextField fullWidth margin="normal" label="Application Name" value={draft.app_name} onChange={(e) => setDraft((p) => ({ ...p, app_name: e.target.value }))} disabled={dialogMode === "edit"} />
+          <TextField fullWidth margin="normal" label="Application Name *" value={draft.app_name} onChange={(e) => setDraft((p) => ({ ...p, app_name: e.target.value }))} disabled={dialogMode === "edit"} />
 
-          <TextField fullWidth margin="normal" label="Start Date" type="date" value={draft.app_startDate} onChange={(e) => setDraft((p) => ({ ...p, app_startDate: e.target.value }))} slotProps={{ inputLabel: { shrink: true } }} />
-
-          <TextField fullWidth margin="normal" label="End Date" type="date" value={draft.app_endDate} onChange={(e) => setDraft((p) => ({ ...p, app_endDate: e.target.value }))} slotProps={{ inputLabel: { shrink: true } }} />
+          <Box sx={{ display: "flex", gap: 2 }}>
+            <TextField fullWidth margin="normal" label="Start Date *" type="date" value={draft.app_startDate} onChange={(e) => setDraft((p) => ({ ...p, app_startDate: e.target.value }))} slotProps={{ inputLabel: { shrink: true } }} />
+            <TextField fullWidth margin="normal" label="End Date *" type="date" value={draft.app_endDate} onChange={(e) => setDraft((p) => ({ ...p, app_endDate: e.target.value }))} slotProps={{ inputLabel: { shrink: true } }} />
+          </Box>
 
           <TextField fullWidth margin="normal" label="Description" multiline minRows={4} value={draft.app_description} onChange={(e) => setDraft((p) => ({ ...p, app_description: e.target.value }))} />
+
+          <FormControl fullWidth margin="normal">
+            <InputLabel>Permit Open *</InputLabel>
+            <Select label="Permit Open" value={draft.permit_Open} onChange={(e) => setDraft((p) => ({ ...p, permit_Open: e.target.value }))}>
+              {roleOptions.map((roles) => (
+                <MenuItem key={roles.id || roles.slug} value={roles.slug}>
+                  {roles.role_name || roles.slug}
+                </MenuItem>
+              ))}
+            </Select>
+          </FormControl>
+
+          <FormControl fullWidth margin="normal">
+            <InputLabel>Permit To Do *</InputLabel>
+            <Select label="Permit To Do" value={draft.permit_toDo} onChange={(e) => setDraft((p) => ({ ...p, permit_toDo: e.target.value }))}>
+              {roleOptions.map((role) => (
+                <MenuItem key={role.id || role.slug} value={role.slug}>
+                  {role.role_name || role.slug}
+                </MenuItem>
+              ))}
+            </Select>
+          </FormControl>
+
+          <FormControl fullWidth margin="normal">
+            <InputLabel>Permit Doing *</InputLabel>
+            <Select label="Permit Doing" value={draft.permit_Doing} onChange={(e) => setDraft((p) => ({ ...p, permit_Doing: e.target.value }))}>
+              {roleOptions.map((roles) => (
+                <MenuItem key={roles.id || roles.slug} value={roles.slug}>
+                  {roles.role_name || roles.slug}
+                </MenuItem>
+              ))}
+            </Select>
+          </FormControl>
+
+          <FormControl fullWidth margin="normal">
+            <InputLabel>Permit Done *</InputLabel>
+            <Select label="Permit Done" value={draft.permit_Done} onChange={(e) => setDraft((p) => ({ ...p, permit_Done: e.target.value }))}>
+              {roleOptions.map((roles) => (
+                <MenuItem key={roles.id || roles.slug} value={roles.slug}>
+                  {roles.role_name || roles.slug}
+                </MenuItem>
+              ))}
+            </Select>
+          </FormControl>
         </DialogContent>
 
         <DialogActions>

@@ -9,6 +9,8 @@ import appDashRoutes from "./routes/appDash.routes.js";
 import taskDashRoutes from "./routes/taskDash.routes.js";
 import workFlowRoutes from "./routes/workflow.routes.js";
 
+import rolesRoutes from "./routes/roles.routes.js";
+
 import { notFoundHandler, errorHandler } from "./middleware/error.middleware.js";
 
 dotenv.config();
@@ -34,6 +36,8 @@ app.use("/api/admin", adminRoutes);
 app.use("/api/apps", appDashRoutes);
 app.use("/api", taskDashRoutes);
 app.use("/api", workFlowRoutes);
+
+app.use("/api/roles", rolesRoutes);
 
 // Quick health endpoint (useful to check server running on Postman)
 app.get("/api/health", (req, res) => {

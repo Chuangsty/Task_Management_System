@@ -22,7 +22,7 @@ api.interceptors.response.use(
     const isLoginRequest = requestUrl.includes("/api/auth/login") || requestUrl.includes("/auth/login");
 
     // when code 401/403 & isRedirectingToLogin false
-    if ((code === 401 || code === 403) && !isLoginRequest && !isRedirectingToLogin) {
+    if (code === 401 && !isLoginRequest && !isRedirectingToLogin) {
       isRedirectingToLogin = true; // prevents any other request from triggering another redirect
 
       // force redirect to login

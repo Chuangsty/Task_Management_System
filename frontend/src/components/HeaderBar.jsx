@@ -4,13 +4,14 @@ parent route component to its child routes without using props manually.
 e.g. lets ProtectedRoute → HeaderBar → Pages share the logged-in 
 user data (me, roles) without calling /api/auth/me again.
 */
-import { Outlet, useNavigate, useOutletContext } from "react-router-dom";
+import { Outlet, useNavigate, useOutletContext, useLocation } from "react-router-dom";
 import { AppBar, Toolbar, Typography, Avatar, Menu, MenuItem, IconButton, Box } from "@mui/material";
 import { api } from "../api/client";
 import "./HeaderBar.css";
 
 export default function HeaderBar() {
   const nav = useNavigate();
+  const location = useLocation();
 
   const { me, roles } = useOutletContext();
 
@@ -19,6 +20,9 @@ export default function HeaderBar() {
 
   const userName = me?.username || "User";
   const isAdmin = roles.includes("ADMIN");
+
+  const isUsersPage = location.pathname === "/users";
+  const isAppsPage = location.pathname === "/applications";
 
   async function handleLogout() {
     try {
@@ -43,7 +47,7 @@ export default function HeaderBar() {
 
             <Menu anchorEl={anchorEl} open={open} onClose={() => setAnchorEl(null)} anchorOrigin={{ vertical: "bottom", horizontal: "right" }} transformOrigin={{ vertical: "top", horizontal: "right" }}>
               {/* IF ADMIN: Button to navigate to user management page */}
-              {isAdmin && (
+              {isAdmin && !isUsersPage && (
                 <MenuItem
                   onClick={async () => {
                     setAnchorEl(null);
@@ -55,14 +59,16 @@ export default function HeaderBar() {
               )}
 
               {/* Button to navigate to application page */}
-              <MenuItem
-                onClick={async () => {
-                  setAnchorEl(null);
-                  nav("/applications");
-                }}
-              >
-                Applications
-              </MenuItem>
+              {!isAppsPage && (
+                <MenuItem
+                  onClick={async () => {
+                    setAnchorEl(null);
+                    nav("/applications");
+                  }}
+                >
+                  Applications
+                </MenuItem>
+              )}
 
               <MenuItem
                 onClick={async () => {
