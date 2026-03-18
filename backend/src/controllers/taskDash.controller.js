@@ -4,9 +4,9 @@ import { listTasksService, createTaskService, updateTaskService, createPlanServi
 export async function listTasksController(req, res, next) {
   try {
     const app_acronym = req.params.appAcronym;
-    const tasks = await listTasksService(app_acronym);
+    const result = await listTasksService(app_acronym);
 
-    res.json(tasks);
+    res.json(result);
   } catch (err) {
     next(err);
   }

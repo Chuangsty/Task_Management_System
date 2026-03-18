@@ -1,0 +1,111 @@
+.taskPageContainer {
+  padding: 24px 40px;
+}
+
+.taskBoardCard {
+  padding: 16px;
+  border-radius: 16px !important;
+  background: #fff;
+}
+
+.taskBoardTopRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+.taskBoardSearch {
+  width: 220px;
+}
+
+.taskBoardPlanBtn {
+  border-radius: 12px !important;
+  font-weight: 800 !important;
+  padding: 7px 14px !important;
+}
+
+.taskBoardPlanBtnPlaceholder {
+  width: 130px;
+}
+
+.taskBoardLoading {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 24px 4px;
+}
+
+.taskBoardColumns {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(220px, 1fr));
+  gap: 18px;
+  overflow-x: auto;
+  align-items: start;
+}
+
+.taskColumn {
+  min-width: 220px;
+  border: 1px solid #8d8d8d;
+  background: #f5f5f5;
+}
+
+.taskColumn__header {
+  padding: 10px 12px;
+  border-bottom: 1px solid #8d8d8d;
+  text-align: center;
+  font-size: 22px;
+  font-weight: 900;
+  background: #e7e7e7;
+}
+
+.taskColumn__body {
+  min-height: 420px;
+  padding: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.taskColumn__newTaskBtn {
+  border-radius: 999px !important;
+  justify-content: center !important;
+  align-items: center !important;
+  font-weight: 700 !important;
+  background: #fff !important;
+  color: #106de7 !important;
+  border-color: #106de7 !important;
+}
+
+.taskColumn__empty {
+  padding: 14px 8px;
+  color: #777;
+  font-size: 14px;
+}
+
+.taskCard {
+  border: 1px solid #6f6f6f;
+  border-radius: 4px;
+  background: #fff;
+  padding: 8px 10px;
+}
+
+.taskCard__id {
+  font-weight: 900;
+  font-size: 20px;
+  margin-bottom: 6px;
+}
+
+.taskCard__line {
+  font-size: 16px;
+  line-height: 1.3;
+  color: #272727;
+  word-break: break-word;
+}
+
+@media (max-width: 1200px) {
+  .taskBoardColumns {
+    grid-template-columns: repeat(5, 240px);
+  }
+}

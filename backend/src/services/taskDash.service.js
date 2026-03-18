@@ -105,7 +105,44 @@ async function getTaskStateRow(conn, slug) {
 export async function listTasksService(app_acronym) {
   const cleanAcronym = requireCleanAppAcronym(app_acronym);
 
-  const [rows] = await pool.query(
+  // app info + permits
+  const [[app]] = await pool.query(
+    `
+    SELECT
+      a.app_id,
+      a.app_name,
+      a.app_acronym,
+      a.permit_Open,
+      a.permit_toDo,
+      a.permit_Doing,
+      a.permit_Done
+    FROM applications a
+    WHERE a.app_acronym = ?
+    LIMIT 1
+    `,
+    [cleanAcronym],
+  );
+
+  if (!app) {
+    const err = new Error("Application not found");
+    err.status = 404;
+    throw err;
+  }
+
+  // all task states from DB
+  const [taskStates] = await pool.query(
+    `
+    SELECT
+      id,
+      slug,
+      task_state_name
+    FROM task_states
+    ORDER BY id ASC
+    `,
+  );
+
+  // all tasks for that app
+  const [tasks] = await pool.query(
     `
     SELECT
       t.task_id,
@@ -113,12 +150,15 @@ export async function listTasksService(app_acronym) {
       t.task_name,
       t.task_description,
       t.task_note,
+      t.plan_id,
       p.plan_name,
       t.task_created_at,
       t.task_taken_at,
       t.task_update_at,
-      ts.task_state_name AS task_state,
+
       ts.id AS task_state_id,
+      ts.slug AS task_state_slug,
+      ts.task_state_name AS task_state,
 
       c.id AS creator_id,
       c.username AS creator_username,
@@ -137,7 +177,12 @@ export async function listTasksService(app_acronym) {
     `,
     [cleanAcronym],
   );
-  return rows;
+
+  return {
+    app,
+    taskStates,
+    tasks,
+  };
 }
 
 // task creation function
