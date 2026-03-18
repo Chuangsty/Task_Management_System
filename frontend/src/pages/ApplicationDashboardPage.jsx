@@ -210,11 +210,13 @@ export default function ApplicationsDashboardPage() {
             onChange={(e) => setSearch(e.target.value)}
             className="appsSearch"
             slotProps={{
-              startAdornment: (
-                <InputAdornment position="start">
-                  <SearchIcon />
-                </InputAdornment>
-              ),
+              input: {
+                startAdornment: (
+                  <InputAdornment position="start">
+                    <SearchIcon />
+                  </InputAdornment>
+                ),
+              },
             }}
           />
 
