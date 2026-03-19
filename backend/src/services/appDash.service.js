@@ -240,6 +240,14 @@ export async function updateAppsService({ app_acronym, app_id, app_startDate, ap
     const values = [];
 
     if (app_startDate !== undefined) {
+      const today = new Date().toISOString().split("T")[0];
+
+      if (app_startDate < today) {
+        const err = new Error("Start date cannot be before current date");
+        err.status = 400;
+        throw err;
+      }
+
       updates.push("app_startDate = ?");
       values.push(app_startDate);
     }
@@ -257,7 +265,7 @@ export async function updateAppsService({ app_acronym, app_id, app_startDate, ap
       values.push(app_endDate);
     }
 
-    if (app_startDate > app_endDate) {
+    if (app_startDate && app_endDate && app_startDate > app_endDate) {
       const err = new Error("Start date must be before end date");
       err.status = 400;
       throw err;
@@ -268,6 +276,24 @@ export async function updateAppsService({ app_acronym, app_id, app_startDate, ap
 
       updates.push("app_description = ?");
       values.push(cleanDescription);
+    }
+
+    // Permits update
+    if (permit_Open !== undefined) {
+      updates.push("permit_Open = ?");
+      values.push(permit_Open);
+    }
+    if (permit_toDo !== undefined) {
+      updates.push("permit_toDo = ?");
+      values.push(permit_toDo);
+    }
+    if (permit_Doing !== undefined) {
+      updates.push("permit_Doing = ?");
+      values.push(permit_Doing);
+    }
+    if (permit_Done !== undefined) {
+      updates.push("permit_Done = ?");
+      values.push(permit_Done);
     }
 
     // CAN IMPLEMENT CONTRAINTS TO INCLUDE PLANS START END DATE TO CONTAIN AND NOT BE CONTAINED.

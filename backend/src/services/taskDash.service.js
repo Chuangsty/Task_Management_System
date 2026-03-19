@@ -486,7 +486,7 @@ export async function createPlanService({ app_acronym, plan_name, plan_startDate
     const cleanPlanStart = String(plan_startDate).slice(0, 10);
     const appStart = String(app.app_startDate).slice(0, 10);
     if (cleanPlanStart < appStart) {
-      const err = new Error("Plan start date cannot be earlier than application start date");
+      const err = new Error(`Plan start date cannot be earlier than application start date: (${appStart})`);
       err.status = 400;
       throw err;
     }
@@ -494,7 +494,7 @@ export async function createPlanService({ app_acronym, plan_name, plan_startDate
     const cleanPlanEnd = String(plan_endDate).slice(0, 10);
     const appEnd = String(app.app_endDate).slice(0, 10);
     if (cleanPlanEnd > appEnd) {
-      const err = new Error("Plan end date cannot be later than application end date");
+      const err = new Error(`Plan end date cannot be later than application end date: (${appEnd})`);
       err.status = 400;
       throw err;
     }

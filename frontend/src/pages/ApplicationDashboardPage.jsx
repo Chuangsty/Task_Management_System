@@ -221,7 +221,6 @@ export default function ApplicationsDashboardPage() {
           />
 
           {isProjectLead ? (
-            // <Button variant="outlined" startIcon={<AddIcon />} className="appsNewAppBtn">
             // On click add new application
             <Button variant="outlined" startIcon={<AddIcon />} onClick={openCreateDialog} className="appsNewAppBtn">
               New App
@@ -307,9 +306,9 @@ export default function ApplicationsDashboardPage() {
           <FormControl fullWidth margin="normal">
             <InputLabel>Permit To Do *</InputLabel>
             <Select label="Permit To Do" value={draft.permit_toDo} onChange={(e) => setDraft((p) => ({ ...p, permit_toDo: e.target.value }))}>
-              {roleOptions.map((role) => (
-                <MenuItem key={role.id || role.slug} value={role.slug}>
-                  {role.role_name || role.slug}
+              {roleOptions.map((roles) => (
+                <MenuItem key={roles.id || roles.slug} value={roles.slug}>
+                  {roles.role_name || roles.slug}
                 </MenuItem>
               ))}
             </Select>

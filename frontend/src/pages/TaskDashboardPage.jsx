@@ -1,17 +1,12 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { useLocation, useNavigate, useOutletContext, useParams } from "react-router-dom";
-import { Alert, Button, CircularProgress, Container, Dialog, DialogActions, DialogContent, DialogTitle, InputAdornment, Paper, Snackbar, TextField, Typography } from "@mui/material";
+import { Alert, Box, Button, CircularProgress, Container, Dialog, DialogActions, DialogContent, DialogTitle, FormControl, InputAdornment, InputLabel, MenuItem, Paper, Select, Snackbar, TextField, Typography } from "@mui/material";
 
 import SearchIcon from "@mui/icons-material/Search";
 import AddIcon from "@mui/icons-material/Add";
 
 import { api } from "../api/client";
 import "./TaskDashboardPage.css";
-
-// function formatTakenDate(value) {
-//   if (!value) return "-";
-//   return String(value).slice(0, 10);
-// }
 
 function TaskCard({ task }) {
   return (
@@ -40,12 +35,31 @@ export default function TaskDashboardPage() {
   const [loading, setLoading] = useState(true);
   const [errMsg, setErrMsg] = useState("");
 
+  // Task creation dialog
   const [openTaskDialog, setOpenTaskDialog] = useState(false);
   const [creatingTask, setCreatingTask] = useState(false);
   const [taskForm, setTaskForm] = useState({
     task_name: "",
     task_description: "",
   });
+
+  // Plan creation dialog
+  const [openPlanDialog, setOpenPlanDialog] = useState(false);
+  const [creatingPlan, setCreatingPlan] = useState(false);
+  const [planForm, setPlanForm] = useState({
+    plan_name: "",
+    plan_startDate: "",
+    plan_endDate: "",
+    task_ids: [], // task selection
+  });
+  const selectableTasks = useMemo(() => {
+    return tasks.filter((task) => {
+      const isOpen = String(task.task_state || "").toUpperCase() === "OPEN";
+      const hasNoPlan = !task.plan_name;
+      return isOpen && hasNoPlan;
+    });
+  }, [tasks]);
+
   const [toast, setToast] = useState({
     open: false,
     severity: "success",
@@ -88,6 +102,22 @@ export default function TaskDashboardPage() {
     if (creatingTask) return;
     setOpenTaskDialog(false);
   }
+  // Plan Creation Helper Functions
+  function handleOpenPlanDialog() {
+    setPlanForm({
+      plan_name: "",
+      plan_startDate: "",
+      plan_endDate: "",
+      task_ids: [], // task selection
+    });
+    setOpenPlanDialog(true);
+  }
+  function handleClosePlanDialog() {
+    if (creatingPlan) return;
+    setOpenPlanDialog(false);
+  }
+
+  // Task Creation Function
   async function handleCreateTask() {
     const cleanTaskName = taskForm.task_name.trim();
     const cleanTaskDescription = taskForm.task_description.trim();
@@ -101,7 +131,7 @@ export default function TaskDashboardPage() {
       return;
     }
     try {
-      setCreatingTask(false);
+      setCreatingTask(true);
 
       await api.post(`/api/apps/${appAcronym}/tasks`, {
         task_name: cleanTaskName,
@@ -125,6 +155,71 @@ export default function TaskDashboardPage() {
       });
     } finally {
       setCreatingTask(false);
+    }
+  }
+  // Plan Creation Function
+  async function handleCreatePlan() {
+    const trimPlanName = planForm.plan_name.trim();
+    const cleanPlanName = trimPlanName.charAt(0).toUpperCase() + trimPlanName.slice(1);
+
+    if (!cleanPlanName) {
+      setToast({
+        open: true,
+        severity: "error",
+        message: "Plan name is required",
+      });
+      return;
+    }
+    if (!planForm.plan_startDate || !planForm.plan_endDate) {
+      setToast({
+        open: true,
+        severity: "error",
+        message: "Plan start and end date are required",
+      });
+      return;
+    }
+    if (planForm.plan_startDate > planForm.plan_endDate) {
+      setToast({
+        open: true,
+        severity: "error",
+        message: "Plan end date must be later than start date",
+      });
+      return;
+    }
+    if (!Array.isArray(planForm.task_ids) || planForm.task_ids.length === 0) {
+      setToast({
+        open: true,
+        severity: "error",
+        message: "Select at least one task",
+      });
+      return;
+    }
+    try {
+      setCreatingPlan(true);
+
+      await api.post(`/api/apps/${appAcronym}/plan`, {
+        plan_name: cleanPlanName,
+        plan_startDate: planForm.plan_startDate,
+        plan_endDate: planForm.plan_endDate,
+        task_ids: planForm.task_ids,
+      });
+
+      setOpenPlanDialog(false);
+
+      setToast({
+        open: true,
+        severity: "success",
+        message: "Plan created successfully",
+      });
+      await loadTasks();
+    } catch (err) {
+      setToast({
+        open: true,
+        severity: "error",
+        message: err?.response?.data?.error || "Failed to create plan",
+      });
+    } finally {
+      setCreatingPlan(false);
     }
   }
 
@@ -218,13 +313,7 @@ export default function TaskDashboardPage() {
           />
 
           {canCreatePlan ? (
-            <Button
-              variant="outlined"
-              className="taskBoardPlanBtn"
-              onClick={() => {
-                // skeleton button for now
-              }}
-            >
+            <Button variant="outlined" className="taskBoardPlanBtn" onClick={handleOpenPlanDialog}>
               Manage Plan
             </Button>
           ) : (
@@ -255,7 +344,7 @@ export default function TaskDashboardPage() {
                       </Button>
                     ) : null}
 
-                    {columnTasks.length === 0 ? <div className="taskColumn__empty">No tasks</div> : columnTasks.map((task) => <TaskCard key={task.task_id || `${task.task_name}-${task.task_no}`} task={task} />)}
+                    {columnTasks.length === 0 ? <div className="taskColumn__empty">No task</div> : columnTasks.map((task) => <TaskCard key={task.task_id || `${task.task_name}-${task.task_no}`} task={task} />)}
                   </div>
                 </div>
               );
@@ -264,6 +353,68 @@ export default function TaskDashboardPage() {
         )}
       </Paper>
 
+      {/* Plan creation dialog */}
+      <Dialog open={openPlanDialog} onClose={handleClosePlanDialog} fullWidth maxWidth="sm">
+        <DialogTitle>Create New PLan</DialogTitle>
+
+        <DialogContent dividers>
+          {/* Plan name */}
+          <TextField
+            fullWidth
+            margin="normal"
+            label="Plan Name *"
+            value={planForm.plan_name}
+            onChange={(e) =>
+              setPlanForm((prev) => ({
+                ...prev,
+                plan_name: e.target.value,
+              }))
+            }
+          />
+
+          {/* Start & end dates */}
+          <Box sx={{ display: "flex", gap: 2 }}>
+            {/* Start date */}
+            <TextField fullWidth margin="normal" label="Start Date *" type="date" value={planForm.plan_startDate} onChange={(e) => setPlanForm((p) => ({ ...p, plan_startDate: e.target.value }))} slotProps={{ inputLabel: { shrink: true } }} />
+            {/* End date */}
+            <TextField fullWidth margin="normal" label="End Date *" type="date" value={planForm.plan_endDate} onChange={(e) => setPlanForm((p) => ({ ...p, plan_endDate: e.target.value }))} slotProps={{ inputLabel: { shrink: true } }} />
+          </Box>
+
+          {/* Task(s) input/selection */}
+          <FormControl fullWidth margin="normal">
+            <InputLabel>Task(s) *</InputLabel>
+            <Select
+              multiple
+              label="Task(s) *"
+              value={planForm.task_ids}
+              onChange={(e) => {
+                const value = e.target.value;
+                setPlanForm((p) => ({
+                  ...p,
+                  task_ids: typeof value === "string" ? value.split(",") : value,
+                }));
+              }}
+            >
+              {selectableTasks.map((task) => (
+                <MenuItem key={task.task_id + task.task_name} value={task.task_id}>
+                  {`${task.task_id}: ${task.task_name}`}
+                </MenuItem>
+              ))}
+            </Select>
+          </FormControl>
+        </DialogContent>
+
+        <DialogActions>
+          <Button onClick={handleClosePlanDialog} disabled={creatingPlan}>
+            Cancel
+          </Button>
+          <Button onClick={handleCreatePlan} variant="contained" disabled={creatingPlan}>
+            {creatingPlan ? "Creating..." : "Create Plan"}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Task creation dialog */}
       <Dialog open={openTaskDialog} onClose={handleCloseTaskDialog} fullWidth maxWidth="sm">
         <DialogTitle>Create New Task</DialogTitle>
 
