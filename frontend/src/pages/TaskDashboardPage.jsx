@@ -55,6 +55,14 @@ export default function TaskDashboardPage() {
   // Task detail dialog
   const [openTaskDetailDialog, setOpenTaskDetailDialog] = useState(false);
   const [selectedTask, setSelectedTask] = useState(null);
+  // Note input feature
+  const [noteInput, setNoteInput] = useState("");
+  const [savingNote, setSavingNote] = useState(false);
+  // taking of task
+  const [takingTask, setTakingTask] = useState(false);
+  // forfeiting and submitting of task
+  // const [forfeitingTask, setForfeitingTask] = useState(false);
+  // const [submittingTask, setSubmittingTask] = useState(false);
 
   // Plan creation dialog
   const [openPlanDialog, setOpenPlanDialog] = useState(false);
@@ -96,12 +104,12 @@ export default function TaskDashboardPage() {
   const canCreateTask = Boolean(appInfo?.permit_Open) && roles.includes(appInfo.permit_Open);
   // ability to create plan
   const canCreatePlan = Boolean(appInfo?.permit_toDo) && roles.includes(appInfo.permit_toDo);
-  // // ability to take task
-  // const canTakeTask = Boolean(appInfo?.permit_Doing) && roles.includes(appInfo.permit_Doing);
-  // // ability to submit task for review
-  // const canSubmitTask = Boolean(appInfo?.permit_Done) && roles.includes(appInfo.permit_Done);
-  // // ability to approve submitted task
-  // const canApproveTask = Boolean(appInfo?.permit_Closed) && roles.includes(appInfo.permit_Closed);
+  // ability to take task
+  const canTakeTask = Boolean(appInfo?.permit_Doing) && roles.includes(appInfo.permit_Doing);
+  // ability to submit task for review
+  const canSubmitTask = Boolean(appInfo?.permit_Done) && roles.includes(appInfo.permit_Done);
+  // ability to approve submitted task
+  const canApproveTask = Boolean(appInfo?.permit_Closed) && roles.includes(appInfo.permit_Closed);
 
   // Task Creation Helper Functions
   function handleOpenTaskDialog() {
@@ -119,12 +127,64 @@ export default function TaskDashboardPage() {
   // Task Detail Viewer Helper Function
   function handleOpenTaskDetail(task) {
     setSelectedTask(task);
+    setNoteInput("");
     setOpenTaskDetailDialog(true);
   }
+  // Note input feature inside task detail viewer
+  async function handleSaveNote() {
+    const cleanNote = noteInput.trim();
+
+    if (!selectedTask?.task_id) return;
+
+    if (!cleanNote) {
+      setToast({
+        open: true,
+        severity: "error",
+        message: "Note cannot be empty",
+      });
+      return;
+    }
+
+    try {
+      setSavingNote(true);
+
+      // Change this endpoint to match your backend route
+      const res = await api.patch(`/api/tasks/${selectedTask.task_id}/note`, {
+        note: cleanNote,
+      });
+
+      const updatedTask = res.data?.task;
+
+      if (updatedTask) {
+        setSelectedTask(updatedTask);
+
+        setTasks((prev) => prev.map((task) => (task.task_id === updatedTask.task_id ? updatedTask : task)));
+      }
+
+      setNoteInput("");
+
+      setToast({
+        open: true,
+        severity: "success",
+        message: "Note added successfully",
+      });
+    } catch (err) {
+      setToast({
+        open: true,
+        severity: "error",
+        message: err?.response?.data?.error || "Failed to save note",
+      });
+    } finally {
+      setSavingNote(false);
+    }
+  }
+
+  // task detail dialog closer
   function handleCloseTaskDetail() {
     setOpenTaskDetailDialog(false);
     setSelectedTask(null);
   }
+
   function formatDisplayDate(value) {
     if (!value) return "-";
 
@@ -258,6 +318,76 @@ export default function TaskDashboardPage() {
       setCreatingPlan(false);
     }
   }
+
+  // dev take task
+  async function handleTakeTask() {
+    if (!selectedTask?.task_id) return;
+
+    try {
+      setTakingTask(true);
+
+      const res = await api.post(`/api/tasks/${selectedTask.task_id}/take`);
+      const updatedTask = res.data?.task;
+
+      if (updatedTask) {
+        setSelectedTask(updatedTask);
+        setTasks((prev) => prev.map((task) => (task.task_id === updatedTask.task_id ? updatedTask : task)));
+      } else {
+        await loadTasks();
+      }
+
+      setToast({
+        open: true,
+        severity: "success",
+        message: res.data?.message || "Task taken successfully",
+      });
+    } catch (err) {
+      setToast({
+        open: true,
+        severity: "error",
+        message: err?.response?.data?.error || "Failed to take task",
+      });
+    } finally {
+      setTakingTask(false);
+    }
+  }
+
+  // dev forfeit task
+  // async function handleForfeitTask() {
+  //   if (!selectedTask?.task_id) return;
+
+  //   try {
+  //     setForfeitingTask(true);
+
+  //     const res = await api.post(`/api/tasks/${selectedTask.task_id}/forfeit`);
+  //     const updatedTask = res.data?.task;
+
+  //     if (updatedTask) {
+  //       setSelectedTask(updatedTask);
+  //       setTasks((prev) =>
+  //         prev.map((task) =>
+  //           task.task_id === updatedTask.task_id ? updatedTask : task
+  //         )
+  //       );
+  //     } else {
+  //       await loadTasks();
+  //     }
+
+  //     setToast({
+  //       open: true,
+  //       severity: "success",
+  //       message: res.data?.message || "Task forfeited successfully",
+  //     });
+  //   } catch (err) {
+  //     setToast({
+  //       open: true,
+  //       severity: "error",
+  //       message: err?.response?.data?.error || "Failed to forfeit task",
+  //     });
+  //   } finally {
+  //     setForfeitingTask(false);
+  //   }
+  // }
 
   async function loadTasks() {
     setErrMsg("");
@@ -556,15 +686,46 @@ export default function TaskDashboardPage() {
                 </Paper>
               </div>
 
-              <div className="taskDetailDialog__commentsWrap">
-                <TextField fullWidth multiline minRows={4} label="Comments" placeholder="Placeholder for future workflow action comments" value="" InputProps={{ readOnly: true }} />
+              <div className="taskDetailDialog__notesWrap">
+                <TextField fullWidth multiline minRows={4} label="Input Notes" placeholder="Placeholder for future workflow action Input Notes" value={noteInput} onChange={(e) => setNoteInput(e.target.value)} />
               </div>
             </div>
           </div>
         </DialogContent>
 
         <DialogActions className="taskDetailDialog__actions">
-          <Button variant="outlined" onClick={handleCloseTaskDetail} className="taskDetailDialog__closeBtn">
+          {canTakeTask && selectedTask?.task_state_slug === "TODO" ? (
+            <Button variant="contained" onClick={handleTakeTask} disabled={takingTask || savingNote}>
+              {takingTask ? "Taking..." : "Take Task"}
+            </Button>
+          ) : null}
+
+          {canSubmitTask && selectedTask?.task_state_slug === "DOING" ? (
+            <>
+              <Button variant="contained" onClick={() => {}} className="forfeit_btn">
+                Forfeit
+              </Button>
+              <Button variant="contained" onClick={() => {}} className="submit_btn">
+                Submit
+              </Button>
+            </>
+          ) : null}
+
+          {canApproveTask && selectedTask?.task_state_slug === "DONE" ? (
+            <>
+              <Button variant="contained" onClick={() => {}} className="reject_btn">
+                Reject
+              </Button>
+              <Button variant="contained" onClick={() => {}} className="approve_btn">
+                Approve
+              </Button>
+            </>
+          ) : null}
+
+          <Button variant="contained" onClick={handleSaveNote} className="" disabled={savingNote}>
+            {savingNote ? "Saving..." : "Add Note"}
+          </Button>
+          <Button variant="contained" onClick={handleCloseTaskDetail} className=" taskDetailDialog__closeBtn" disabled={savingNote}>
             Close
           </Button>
         </DialogActions>

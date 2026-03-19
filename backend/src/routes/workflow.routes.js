@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { requireAuth } from "../middleware/auth.middleware.js";
-import { takeTaskController, forfeitTaskController, submitTaskController, rejectTaskController, approveTaskController } from "../controllers/workflow.controller.js";
+import { takeTaskController, forfeitTaskController, submitTaskController, rejectTaskController, approveTaskController, updateTaskNoteController } from "../controllers/workflow.controller.js";
 import { requireTaskPermit } from "../middleware/permit.middleware.js";
 
 const router = Router();
@@ -18,5 +18,8 @@ router.post("/tasks/:taskId/submit", requireAuth, requireTaskPermit("permit_Done
 router.post("/tasks/:taskId/reject", requireAuth, rejectTaskController);
 // POST api/tasks/:taskId/approve
 router.post("/tasks/:taskId/approve", requireAuth, approveTaskController);
+
+// PATCH /api/tasks/:taskId/note
+router.patch("/tasks/:taskId/note", requireAuth, updateTaskNoteController);
 
 export default router;

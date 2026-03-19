@@ -201,17 +201,37 @@
   background: #fff;
 }
 
-.taskDetailDialog__commentsWrap {
+.taskDetailDialog__notesWrap {
   margin-top: auto;
 }
 
 .taskDetailDialog__actions {
-  justify-content: center !important;
   gap: 16px;
   padding: 16px !important;
 }
 
 .taskDetailDialog__closeBtn {
+  background: red !important;
+  min-width: 140px !important;
+}
+
+.taskWorkflow__actions {
+  justify-content: left !important;
+  gap: 16px;
+  padding: 16px !important;
+}
+
+.takeTask_btn {
+  background: rgb(104, 173, 0) !important;
+  min-width: 140px !important;
+}
+
+.forfeit_btn {
+  background: red !important;
+  min-width: 140px !important;
+}
+.submit_btn {
+  background: rgb(104, 173, 0) !important;
   min-width: 140px !important;
 }
 

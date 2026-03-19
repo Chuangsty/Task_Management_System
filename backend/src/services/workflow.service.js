@@ -508,3 +508,121 @@ export async function approveTaskService({ task_id, actorUserId }) {
   });
 }
 // Project Lead actions end ==========================================
+
+// Note input feature
+function ensureTaskNotClosed(existingTask) {
+  if (existingTask.task_state_slug === "CLOSED") {
+    const err = new Error("Closed tasks cannot be updated");
+    err.status = 400;
+    throw err;
+  }
+}
+
+export async function updateTaskNoteService({ task_id, note, actorUserId }) {
+  if (!task_id || String(task_id).trim() === "") {
+    const err = new Error("Task id is required");
+    err.status = 400;
+    throw err;
+  }
+
+  const cleanTaskId = String(task_id).trim();
+  const cleanNote = String(note ?? "").trim();
+
+  if (!cleanNote) {
+    const err = new Error("Note is required");
+    err.status = 400;
+    throw err;
+  }
+
+  const conn = await pool.getConnection();
+
+  try {
+    await conn.beginTransaction();
+
+    const [[existingTask]] = await conn.query(
+      `
+      SELECT
+        t.task_id,
+        t.task_note,
+        ts.task_state_name AS task_state_name,
+        ts.slug AS task_state_slug
+      FROM tasks t
+      JOIN task_states ts ON ts.id = t.task_state_id
+      WHERE t.task_id = ?
+      LIMIT 1
+      FOR UPDATE
+      `,
+      [cleanTaskId],
+    );
+
+    if (!existingTask) {
+      const err = new Error("Task not found");
+      err.status = 404;
+      throw err;
+    }
+
+    ensureTaskNotClosed(existingTask);
+
+    const actor = await getUserRow(conn, actorUserId);
+
+    const timestamp = new Date().toLocaleString("sv-SE", {
+      timeZone: "Asia/Singapore",
+    });
+
+    const noteLine = `[ ${timestamp}, Task state: ${existingTask.task_state_name} ] User ${actor.username}: ${cleanNote}`;
+
+    const nextNote = existingTask.task_note ? `${existingTask.task_note}\n${noteLine}` : noteLine;
+
+    await conn.query(
+      `
+      UPDATE tasks
+      SET task_note = ?
+      WHERE task_id = ?
+      `,
+      [nextNote, cleanTaskId],
+    );
+
+    const [[updatedTask]] = await conn.query(
+      `
+      SELECT
+        t.task_id,
+        t.task_no,
+        t.task_name,
+        t.task_description,
+        t.task_note,
+        t.plan_id,
+        p.plan_name,
+        t.task_created_at,
+        t.task_taken_at,
+        t.task_update_at,
+        ts.id AS task_state_id,
+        ts.slug AS task_state_slug,
+        ts.task_state_name AS task_state,
+        c.id AS creator_id,
+        c.username AS creator_username,
+        d.id AS developer_id,
+        d.username AS developer_username
+      FROM tasks t
+      JOIN task_states ts ON ts.id = t.task_state_id
+      JOIN users c ON c.id = t.creator
+      LEFT JOIN users d ON d.id = t.developer
+      LEFT JOIN plans p ON p.plan_id = t.plan_id
+      WHERE t.task_id = ?
+      LIMIT 1
+      `,
+      [cleanTaskId],
+    );
+
+    await conn.commit();
+
+    return {
+      message: "Note added successfully",
+      task: updatedTask,
+    };
+  } catch (err) {
+    await conn.rollback();
+    throw err;
+  } finally {
+    conn.release();
+  }
+}
