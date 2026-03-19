@@ -61,8 +61,8 @@ export default function TaskDashboardPage() {
   // taking of task
   const [takingTask, setTakingTask] = useState(false);
   // forfeiting and submitting of task
-  // const [forfeitingTask, setForfeitingTask] = useState(false);
-  // const [submittingTask, setSubmittingTask] = useState(false);
+  const [forfeitingTask, setForfeitingTask] = useState(false);
+  const [submittingTask, setSubmittingTask] = useState(false);
 
   // Plan creation dialog
   const [openPlanDialog, setOpenPlanDialog] = useState(false);
@@ -359,41 +359,58 @@ export default function TaskDashboardPage() {
   }
 
   // dev forfeit task
-  // async function handleForfeitTask() {
-  //   if (!selectedTask?.task_id) return;
+  async function handleForfeitTask() {
+    if (!selectedTask?.task_id) return;
 
-  //   try {
-  //     setForfeitingTask(true);
+    try {
+      setForfeitingTask(true);
 
-  //     const res = await api.post(`/api/tasks/${selectedTask.task_id}/forfeit`);
-  //     const updatedTask = res.data?.task;
+      await api.post(`/api/tasks/${selectedTask.task_id}/forfeit`);
+      await refreshTaskInDialog(selectedTask.task_id);
+      handleCloseTaskDetail(true);
 
-  //     if (updatedTask) {
-  //       setSelectedTask(updatedTask);
-  //       setTasks((prev) =>
-  //         prev.map((task) =>
-  //           task.task_id === updatedTask.task_id ? updatedTask : task
-  //         )
-  //       );
-  //     } else {
-  //       await loadTasks();
-  //     }
+      setToast({
+        open: true,
+        severity: "success",
+        message: "Task forfeited successfully",
+      });
+    } catch (err) {
+      setToast({
+        open: true,
+        severity: "error",
+        message: err?.response?.data?.error || "Failed to forfeit task",
+      });
+    } finally {
+      setForfeitingTask(false);
+    }
+  }
 
-  //     setToast({
-  //       open: true,
-  //       severity: "success",
-  //       message: res.data?.message || "Task forfeited successfully",
-  //     });
-  //   } catch (err) {
-  //     setToast({
-  //       open: true,
-  //       severity: "error",
-  //       message: err?.response?.data?.error || "Failed to forfeit task",
-  //     });
-  //   } finally {
-  //     setForfeitingTask(false);
-  //   }
-  // }
+  // dev submit task
+  async function handleSubmitTask() {
+    if (!selectedTask?.task_id) return;
+
+    try {
+      setSubmittingTask(true);
+
+      await api.post(`/api/tasks/${selectedTask.task_id}/submit`);
+      await refreshTaskInDialog(selectedTask.task_id);
+      handleCloseTaskDetail(true);
+
+      setToast({
+        open: true,
+        severity: "success",
+        message: "Task submitted successfully",
+      });
+    } catch (err) {
+      setToast({
+        open: true,
+        severity: "error",
+        message: err?.response?.data?.error || "Failed to submit task",
+      });
+    } finally {
+      setSubmittingTask(false);
+    }
+  }
 
   async function loadTasks() {
     setErrMsg("");
@@ -693,7 +710,7 @@ export default function TaskDashboardPage() {
               </div>
 
               <div className="taskDetailDialog__notesWrap">
-                <TextField fullWidth multiline minRows={4} label="Input Notes" placeholder="Placeholder for future workflow action Input Notes" value={noteInput} onChange={(e) => setNoteInput(e.target.value)} />
+                <TextField fullWidth multiline minRows={4} label="Input Notes" value={noteInput} onChange={(e) => setNoteInput(e.target.value)} />
               </div>
             </div>
           </div>
@@ -708,11 +725,11 @@ export default function TaskDashboardPage() {
 
           {canSubmitTask && selectedTask?.task_state_slug === "DOING" ? (
             <>
-              <Button variant="outlined" onClick={() => {}} className="forfeit_btn">
-                Forfeit
+              <Button variant="outlined" onClick={handleForfeitTask} className="forfeit_btn" disabled={forfeitingTask || savingNote}>
+                {forfeitingTask ? "Forfeiting..." : "Forfeit Task"}
               </Button>
-              <Button variant="outlined" onClick={() => {}} className="submit_btn">
-                Submit
+              <Button variant="outlined" onClick={handleSubmitTask} className="submit_btn" disabled={submittingTask || savingNote}>
+                {submittingTask ? "Submitting..." : "Submit Task"}
               </Button>
             </>
           ) : null}
