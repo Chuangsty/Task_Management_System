@@ -221,17 +221,20 @@
   padding: 16px !important;
 }
 
-.takeTask_btn {
-  background: rgb(104, 173, 0) !important;
-  min-width: 140px !important;
+.taketask_btn {
+  color: rgb(104, 173, 0) !important;
+  border: 2px solid rgb(104, 173, 0) !important;
+  min-width: 120px !important;
 }
 
 .forfeit_btn {
-  background: red !important;
+  color: red !important;
+  border: 2px solid red !important;
   min-width: 140px !important;
 }
 .submit_btn {
-  background: rgb(104, 173, 0) !important;
+  color: rgb(104, 173, 0) !important;
+  border: 2px solid rgb(104, 173, 0) !important;
   min-width: 140px !important;
 }
 

@@ -319,6 +319,18 @@ export default function TaskDashboardPage() {
     }
   }
 
+  // refresh task whenever action made
+  async function refreshTaskInDialog(taskId) {
+    const res = await api.get(`/api/apps/${appAcronym}/tasks`);
+    const latestTasks = Array.isArray(res.data?.tasks) ? res.data.tasks : [];
+    const latestTask = latestTasks.find((task) => task.task_id === taskId) || null;
+
+    setTasks(latestTasks);
+    setTaskStates(Array.isArray(res.data?.taskStates) ? res.data.taskStates : []);
+    setAppInfo(res.data?.app || null);
+    setSelectedTask(latestTask);
+  }
+
   // dev take task
   async function handleTakeTask() {
     if (!selectedTask?.task_id) return;
@@ -326,20 +338,14 @@ export default function TaskDashboardPage() {
     try {
       setTakingTask(true);
 
-      const res = await api.post(`/api/tasks/${selectedTask.task_id}/take`);
-      const updatedTask = res.data?.task;
-
-      if (updatedTask) {
-        setSelectedTask(updatedTask);
-        setTasks((prev) => prev.map((task) => (task.task_id === updatedTask.task_id ? updatedTask : task)));
-      } else {
-        await loadTasks();
-      }
+      await api.post(`/api/tasks/${selectedTask.task_id}/take`);
+      await refreshTaskInDialog(selectedTask.task_id);
+      handleCloseTaskDetail(true);
 
       setToast({
         open: true,
         severity: "success",
-        message: res.data?.message || "Task taken successfully",
+        message: "Task taken successfully",
       });
     } catch (err) {
       setToast({
@@ -695,17 +701,17 @@ export default function TaskDashboardPage() {
 
         <DialogActions className="taskDetailDialog__actions">
           {canTakeTask && selectedTask?.task_state_slug === "TODO" ? (
-            <Button variant="contained" onClick={handleTakeTask} disabled={takingTask || savingNote}>
+            <Button variant="outlined" onClick={handleTakeTask} className="taketask_btn" disabled={takingTask || savingNote}>
               {takingTask ? "Taking..." : "Take Task"}
             </Button>
           ) : null}
 
           {canSubmitTask && selectedTask?.task_state_slug === "DOING" ? (
             <>
-              <Button variant="contained" onClick={() => {}} className="forfeit_btn">
+              <Button variant="outlined" onClick={() => {}} className="forfeit_btn">
                 Forfeit
               </Button>
-              <Button variant="contained" onClick={() => {}} className="submit_btn">
+              <Button variant="outlined" onClick={() => {}} className="submit_btn">
                 Submit
               </Button>
             </>
@@ -713,7 +719,7 @@ export default function TaskDashboardPage() {
 
           {canApproveTask && selectedTask?.task_state_slug === "DONE" ? (
             <>
-              <Button variant="contained" onClick={() => {}} className="reject_btn">
+              <Button variant="outlined" onClick={() => {}} className="reject_btn">
                 Reject
               </Button>
               <Button variant="contained" onClick={() => {}} className="approve_btn">
