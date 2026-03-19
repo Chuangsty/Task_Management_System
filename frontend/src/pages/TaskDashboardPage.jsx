@@ -512,7 +512,9 @@ export default function TaskDashboardPage() {
 
                 <div className="taskDetailDialog__fieldRow">
                   <Typography fontWeight="bold">Task Description</Typography>
-                  <TextField fullWidth multiline minRows={4} value={selectedTask?.task_description || ""} />
+                  <Paper className="taskDetailDialog__descriptionBox" elevation={0}>
+                    {selectedTask?.task_description || "-"}
+                  </Paper>
                 </div>
 
                 <div className="taskDetailDialog__fieldRow taskDetailDialog__fieldRow--text">
