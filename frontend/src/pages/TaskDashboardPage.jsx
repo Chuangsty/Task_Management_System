@@ -63,6 +63,9 @@ export default function TaskDashboardPage() {
   // forfeiting and submitting of task
   const [forfeitingTask, setForfeitingTask] = useState(false);
   const [submittingTask, setSubmittingTask] = useState(false);
+  // rejecting and approving of task
+  const [rejectingTask, setRejectingTask] = useState(false);
+  const [approvingTask, setApprovingTask] = useState(false);
 
   // Plan creation dialog
   const [openPlanDialog, setOpenPlanDialog] = useState(false);
@@ -108,8 +111,17 @@ export default function TaskDashboardPage() {
   const canTakeTask = Boolean(appInfo?.permit_Doing) && roles.includes(appInfo.permit_Doing);
   // ability to submit task for review
   const canSubmitTask = Boolean(appInfo?.permit_Done) && roles.includes(appInfo.permit_Done);
-  // ability to approve submitted task
-  const canApproveTask = Boolean(appInfo?.permit_Closed) && roles.includes(appInfo.permit_Closed);
+
+  const isTaskClosed = String(selectedTask?.task_state_slug || "").toUpperCase() === "CLOSED";
+
+  const noteLines = useMemo(() => {
+    if (!selectedTask?.task_note) return [];
+
+    return selectedTask.task_note
+      .split("\n")
+      .filter((line) => line.trim() !== "")
+      .reverse();
+  }, [selectedTask]);
 
   // Task Creation Helper Functions
   function handleOpenTaskDialog() {
@@ -412,6 +424,60 @@ export default function TaskDashboardPage() {
     }
   }
 
+  // dev rejecting task
+  async function handleRejectTask() {
+    if (!selectedTask?.task_id) return;
+
+    try {
+      setRejectingTask(true);
+
+      await api.post(`/api/tasks/${selectedTask.task_id}/reject`);
+      await refreshTaskInDialog(selectedTask.task_id);
+      handleCloseTaskDetail(true);
+
+      setToast({
+        open: true,
+        severity: "success",
+        message: "Task rejected successfully",
+      });
+    } catch (err) {
+      setToast({
+        open: true,
+        severity: "error",
+        message: err?.response?.data?.error || "Failed to reject task",
+      });
+    } finally {
+      setRejectingTask(false);
+    }
+  }
+
+  // dev appriving task
+  async function handleApproveTask() {
+    if (!selectedTask?.task_id) return;
+
+    try {
+      setApprovingTask(true);
+
+      await api.post(`/api/tasks/${selectedTask.task_id}/approve`);
+      await refreshTaskInDialog(selectedTask.task_id);
+      handleCloseTaskDetail(true);
+
+      setToast({
+        open: true,
+        severity: "success",
+        message: "Task approved successfully",
+      });
+    } catch (err) {
+      setToast({
+        open: true,
+        severity: "error",
+        message: err?.response?.data?.error || "Failed to approve task",
+      });
+    } finally {
+      setApprovingTask(false);
+    }
+  }
+
   async function loadTasks() {
     setErrMsg("");
     setLoading(true);
@@ -705,13 +771,21 @@ export default function TaskDashboardPage() {
                 </Typography>
 
                 <Paper variant="outlined" className="taskDetailDialog__notesBox">
-                  {selectedTask?.task_note || "No notes yet"}
+                  {noteLines.length === 0
+                    ? "No notes yet"
+                    : noteLines.map((line, index) => (
+                        <Typography key={index} className="taskDetailDialog__noteLine">
+                          {line}
+                        </Typography>
+                      ))}
                 </Paper>
               </div>
 
-              <div className="taskDetailDialog__notesWrap">
-                <TextField fullWidth multiline minRows={4} label="Input Notes" value={noteInput} onChange={(e) => setNoteInput(e.target.value)} />
-              </div>
+              {!isTaskClosed ? (
+                <div className="taskDetailDialog__notesWrap">
+                  <TextField fullWidth multiline minRows={4} label="Input Notes" value={noteInput} onChange={(e) => setNoteInput(e.target.value)} />
+                </div>
+              ) : null}
             </div>
           </div>
         </DialogContent>
@@ -734,20 +808,22 @@ export default function TaskDashboardPage() {
             </>
           ) : null}
 
-          {canApproveTask && selectedTask?.task_state_slug === "DONE" ? (
+          {canCreateTask && selectedTask?.task_state_slug === "DONE" ? (
             <>
-              <Button variant="outlined" onClick={() => {}} className="reject_btn">
-                Reject
+              <Button variant="outlined" onClick={handleRejectTask} className="reject_btn" disabled={rejectingTask || savingNote}>
+                {rejectingTask ? "Rejecting..." : "Reject Task"}
               </Button>
-              <Button variant="contained" onClick={() => {}} className="approve_btn">
-                Approve
+              <Button variant="outlined" onClick={handleApproveTask} className="approve_btn" disabled={approvingTask || savingNote}>
+                {approvingTask ? "Approving..." : "Approve Task"}
               </Button>
             </>
           ) : null}
 
-          <Button variant="contained" onClick={handleSaveNote} className="" disabled={savingNote}>
-            {savingNote ? "Saving..." : "Add Note"}
-          </Button>
+          {!isTaskClosed ? (
+            <Button variant="contained" onClick={handleSaveNote} disabled={savingNote}>
+              {savingNote ? "Saving..." : "Add Note"}
+            </Button>
+          ) : null}
           <Button variant="contained" onClick={handleCloseTaskDetail} className=" taskDetailDialog__closeBtn" disabled={savingNote}>
             Close
           </Button>
