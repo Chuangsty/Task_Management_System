@@ -8,15 +8,24 @@ import AddIcon from "@mui/icons-material/Add";
 import { api } from "../api/client";
 import "./TaskDashboardPage.css";
 
-function TaskCard({ task }) {
+function TaskCard({ task, onClick }) {
   return (
-    <div className="taskCard">
+    <div
+      className="taskCard taskCard--clickable"
+      onClick={() => onClick(task)}
+      role="button"
+      tabIndex={0}
+      onKeyDown={(e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          onClick(task);
+        }
+      }}
+    >
       <div className="taskCard__id">{task.task_id}</div>
 
       <div className="taskCard__line">Task: {task.task_name || "-"}</div>
-      {/* <div className="taskCard__line">Plan: {task.plan_name || "-"}</div> */}
       <div className="taskCard__line">Dev: {task.developer_username || "-"}</div>
-      {/* <div className="taskCard__line">Taken on: {formatTakenDate(task.task_taken_at)}</div> */}
     </div>
   );
 }
@@ -42,6 +51,10 @@ export default function TaskDashboardPage() {
     task_name: "",
     task_description: "",
   });
+
+  // Task detail dialog
+  const [openTaskDetailDialog, setOpenTaskDetailDialog] = useState(false);
+  const [selectedTask, setSelectedTask] = useState(null);
 
   // Plan creation dialog
   const [openPlanDialog, setOpenPlanDialog] = useState(false);
@@ -102,6 +115,29 @@ export default function TaskDashboardPage() {
     if (creatingTask) return;
     setOpenTaskDialog(false);
   }
+
+  // Task Detail Viewer Helper Function
+  function handleOpenTaskDetail(task) {
+    setSelectedTask(task);
+    setOpenTaskDetailDialog(true);
+  }
+  function handleCloseTaskDetail() {
+    setOpenTaskDetailDialog(false);
+    setSelectedTask(null);
+  }
+  function formatDisplayDate(value) {
+    if (!value) return "-";
+
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return String(value);
+
+    return date.toLocaleDateString("en-GB", {
+      day: "numeric",
+      month: "long",
+      year: "numeric",
+    });
+  }
+
   // Plan Creation Helper Functions
   function handleOpenPlanDialog() {
     setPlanForm({
@@ -344,7 +380,7 @@ export default function TaskDashboardPage() {
                       </Button>
                     ) : null}
 
-                    {columnTasks.length === 0 ? <div className="taskColumn__empty">No task</div> : columnTasks.map((task) => <TaskCard key={task.task_id || `${task.task_name}-${task.task_no}`} task={task} />)}
+                    {columnTasks.length === 0 ? <div className="taskColumn__empty">No task</div> : columnTasks.map((task) => <TaskCard key={task.task_id || `${task.task_name}-${task.task_no}`} task={task} onClick={handleOpenTaskDetail} />)}
                   </div>
                 </div>
               );
@@ -454,6 +490,80 @@ export default function TaskDashboardPage() {
           </Button>
           <Button onClick={handleCreateTask} variant="contained" disabled={creatingTask}>
             {creatingTask ? "Creating..." : "Create Task"}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Task detail dialog */}
+      <Dialog open={openTaskDetailDialog} onClose={handleCloseTaskDetail} fullWidth maxWidth="lg">
+        <DialogTitle className="taskDetailDialog__title">
+          <div className="taskDetailDialog__header">{selectedTask?.task_id || ""}</div>
+        </DialogTitle>
+
+        <DialogContent dividers className="taskDetailDialog__content">
+          <div className="taskDetailDialog__layout">
+            {/* Left panel */}
+            <div className="taskDetailDialog__left">
+              <div className="taskDetailDialog__fieldList">
+                <div className="taskDetailDialog__fieldRow taskDetailDialog__fieldRow--text">
+                  <Typography fontWeight="bold">Task Name</Typography>
+                  <Typography>{selectedTask?.task_name || ""}</Typography>
+                </div>
+
+                <div className="taskDetailDialog__fieldRow">
+                  <Typography fontWeight="bold">Task Description</Typography>
+                  <TextField fullWidth multiline minRows={4} value={selectedTask?.task_description || ""} />
+                </div>
+
+                <div className="taskDetailDialog__fieldRow taskDetailDialog__fieldRow--text">
+                  <Typography fontWeight="bold">Plan Name</Typography>
+                  <Typography>{selectedTask?.plan_name || "Unassigned"}</Typography>
+                </div>
+
+                <div className="taskDetailDialog__fieldRow taskDetailDialog__fieldRow--text">
+                  <Typography fontWeight="bold">Task State</Typography>
+                  <Typography>{selectedTask?.task_state || "-"}</Typography>
+                </div>
+
+                <div className="taskDetailDialog__fieldRow taskDetailDialog__fieldRow--text">
+                  <Typography fontWeight="bold">Task Creator</Typography>
+                  <Typography>{selectedTask?.creator_username || "-"}</Typography>
+                </div>
+
+                <div className="taskDetailDialog__fieldRow taskDetailDialog__fieldRow--text">
+                  <Typography fontWeight="bold">Task Developer</Typography>
+                  <Typography>{selectedTask?.developer_username || "Unassigned"}</Typography>
+                </div>
+
+                <div className="taskDetailDialog__fieldRow taskDetailDialog__fieldRow--text">
+                  <Typography fontWeight="bold">Task Create Date</Typography>
+                  <Typography>{formatDisplayDate(selectedTask?.created_at || selectedTask?.task_created_at)}</Typography>
+                </div>
+              </div>
+            </div>
+
+            {/* Right panel */}
+            <div className="taskDetailDialog__right">
+              <div>
+                <Typography fontWeight="bold" className="taskDetailDialog__notesTitle">
+                  Notes
+                </Typography>
+
+                <Paper variant="outlined" className="taskDetailDialog__notesBox">
+                  {selectedTask?.task_note || "No notes yet"}
+                </Paper>
+              </div>
+
+              <div className="taskDetailDialog__commentsWrap">
+                <TextField fullWidth multiline minRows={4} label="Comments" placeholder="Placeholder for future workflow action comments" value="" InputProps={{ readOnly: true }} />
+              </div>
+            </div>
+          </div>
+        </DialogContent>
+
+        <DialogActions className="taskDetailDialog__actions">
+          <Button variant="outlined" onClick={handleCloseTaskDetail} className="taskDetailDialog__closeBtn">
+            Close
           </Button>
         </DialogActions>
       </Dialog>

@@ -117,3 +117,111 @@
     grid-template-columns: repeat(5, 240px);
   }
 }
+
+/* for task clickability for task detaiul view */
+.taskCard--clickable {
+  cursor: pointer;
+}
+.taskCard--clickable:hover {
+  opacity: 0.92;
+}
+/* for task detail */
+.taskCard--clickable {
+  cursor: pointer;
+}
+
+.taskCard--clickable:hover {
+  opacity: 0.92;
+}
+
+.taskDetailDialog__title {
+  padding: 0 !important;
+}
+
+.taskDetailDialog__header {
+  background: #000;
+  color: #fff;
+  text-align: center;
+  font-weight: 700;
+  font-size: 1.4rem;
+  padding: 16px 24px;
+}
+
+.taskDetailDialog__content {
+  padding: 0 !important;
+}
+
+.taskDetailDialog__layout {
+  display: grid;
+  grid-template-columns: 1fr 1.6fr;
+  /* min-height: 460px; */
+  height: 60vh;
+  width: 100%;
+}
+
+.taskDetailDialog__left {
+  padding: 24px;
+  border-right: 1px solid #999;
+}
+
+.taskDetailDialog__right {
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.taskDetailDialog__fieldList {
+  display: grid;
+  row-gap: 16px;
+}
+
+.taskDetailDialog__fieldRow {
+  display: grid;
+  grid-template-columns: 140px 1fr;
+  align-items: start;
+  column-gap: 16px;
+
+  margin-bottom: 10px;
+}
+
+.taskDetailDialog__fieldRow--text {
+  align-items: center;
+}
+
+.taskDetailDialog__notesTitle {
+  margin-bottom: 8px !important;
+}
+
+.taskDetailDialog__notesBox {
+  padding: 16px;
+  min-height: 320px;
+  white-space: pre-wrap;
+  overflow-wrap: break-word;
+  background: #fff;
+}
+
+.taskDetailDialog__commentsWrap {
+  margin-top: auto;
+}
+
+.taskDetailDialog__actions {
+  justify-content: center !important;
+  gap: 16px;
+  padding: 16px !important;
+}
+
+.taskDetailDialog__closeBtn {
+  min-width: 140px !important;
+}
+
+@media (max-width: 900px) {
+  .taskDetailDialog__layout {
+    grid-template-columns: 1fr;
+  }
+
+  .taskDetailDialog__left {
+    border-right: none;
+    border-bottom: 1px solid #999;
+  }
+}
