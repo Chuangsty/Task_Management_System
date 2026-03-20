@@ -14,12 +14,13 @@ export async function listTasksController(req, res, next) {
 export async function createTaskController(req, res, next) {
   try {
     const app_acronym = req.params.appAcronym;
-    const { task_name, task_description } = req.body;
+    const { task_name, task_description, plan_name } = req.body;
 
     const result = await createTaskService({
       app_acronym,
       task_name,
       task_description,
+      plan_name,
       actorUserId: req.user.id,
     });
 
@@ -30,12 +31,14 @@ export async function createTaskController(req, res, next) {
 }
 export async function updateTaskController(req, res, next) {
   try {
+    const app_acronym = req.params.appAcronym;
     const task_id = req.params.taskId;
-    const { task_description } = req.body;
+    const { plan_name } = req.body;
 
     const result = await updateTaskService({
+      app_acronym,
       task_id,
-      task_description,
+      plan_name,
       actorUserId: req.user.id,
     });
 

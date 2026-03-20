@@ -240,33 +240,17 @@ export async function updateAppsService({ app_acronym, app_id, app_startDate, ap
     const values = [];
 
     if (app_startDate !== undefined) {
-      const today = new Date().toISOString().split("T")[0];
-
-      if (app_startDate < today) {
-        const err = new Error("Start date cannot be before current date");
-        err.status = 400;
-        throw err;
-      }
-
       updates.push("app_startDate = ?");
       values.push(app_startDate);
     }
 
     if (app_endDate !== undefined) {
-      const today = new Date().toISOString().split("T")[0];
-
-      if (app_endDate < today) {
-        const err = new Error("End date cannot be before current date");
-        err.status = 400;
-        throw err;
-      }
-
       updates.push("app_endDate = ?");
       values.push(app_endDate);
     }
 
     if (app_startDate && app_endDate && app_startDate > app_endDate) {
-      const err = new Error("Start date must be before end date");
+      const err = new Error("Application end date must be later than start date");
       err.status = 400;
       throw err;
     }

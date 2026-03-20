@@ -115,8 +115,10 @@ export async function listTasksService(app_acronym) {
       a.permit_Open,
       a.permit_toDo,
       a.permit_Doing,
-      a.permit_Done
+      a.permit_Done,
+      s.slug AS app_state_slug
     FROM applications a
+    JOIN states s ON s.id = a.state_id
     WHERE a.app_acronym = ?
     LIMIT 1
     `,
@@ -185,8 +187,38 @@ export async function listTasksService(app_acronym) {
   };
 }
 
+// get plan name from application for task plan assignment
+async function getPlanByNameForTask(conn, app_id, plan_name) {
+  const cleanPlanName = String(plan_name ?? "").trim();
+
+  if (!cleanPlanName) return null;
+
+  const [[plan]] = await conn.query(
+    `
+    SELECT
+      plan_id,
+      app_id,
+      plan_name,
+      plan_startDate,
+      plan_endDate
+    FROM plans
+    WHERE app_id = ? AND plan_name = ?
+    LIMIT 1
+    `,
+    [app_id, cleanPlanName],
+  );
+
+  if (!plan) {
+    const err = new Error(`Plan not found: ${cleanPlanName}`);
+    err.status = 404;
+    throw err;
+  }
+
+  return plan;
+}
+
 // task creation function
-export async function createTaskService({ app_acronym, task_name, task_description, actorUserId }) {
+export async function createTaskService({ app_acronym, task_name, task_description, plan_name, actorUserId }) {
   const cleanAcronym = requireCleanAppAcronym(app_acronym);
 
   // validate task name
@@ -198,6 +230,7 @@ export async function createTaskService({ app_acronym, task_name, task_descripti
 
   const cleanTaskName = String(task_name).trim();
   const cleanTaskDescription = task_description == null ? null : String(task_description).trim();
+  const cleanPlanName = plan_name == null ? null : String(plan_name).trim();
 
   const conn = await pool.getConnection();
 
@@ -224,7 +257,9 @@ export async function createTaskService({ app_acronym, task_name, task_descripti
       throw err;
     }
 
-    // 3) get default OPEN task state
+    // 3) get default empty plan assignment
+    let selectedPlan = null;
+    // 3.1) get default OPEN task state
     const openState = await getTaskStateRow(conn, "OPEN");
 
     // 4) generate task number + task id
@@ -253,7 +288,17 @@ export async function createTaskService({ app_acronym, task_name, task_descripti
     }
 
     const createAtTimestamp = new Date().toLocaleString("sv-SE", { timeZone: "Asia/Singapore" });
-    const initialNote = `[ ${createAtTimestamp}, Task state: ${taskState.task_state_name} ] Project Lead ${actor.username} created task.`;
+
+    let initialNote = "";
+    // if plan selected, task state -> to do
+    if (cleanPlanName) {
+      selectedPlan = await getPlanByNameForTask(conn, app.app_id, cleanPlanName);
+      const withPlanNote = `[ ${createAtTimestamp}, Task state: ${taskState.task_state_name} ] Project Lead ${actor.username} created task and assigned task to plan <${selectedPlan.plan_name}>.`;
+      initialNote = withPlanNote;
+    } else {
+      const withoutPlanNote = `[ ${createAtTimestamp}, Task state: ${taskState.task_state_name} ] Project Lead ${actor.username} created task.`;
+      initialNote = withoutPlanNote;
+    }
 
     // 6) insert task
     await conn.query(
@@ -265,12 +310,13 @@ export async function createTaskService({ app_acronym, task_name, task_descripti
             task_name,
             task_description,
             task_note,
+            plan_id,
             task_state_id,
             creator
         )
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
         `,
-      [task_id, app.app_id, task_no, cleanTaskName, cleanTaskDescription, initialNote, openState.id, actorUserId],
+      [task_id, app.app_id, task_no, cleanTaskName, cleanTaskDescription, initialNote, selectedPlan?.plan_id ?? null, openState.id, actorUserId],
     );
 
     // 7) increment app Rnumber_task
@@ -293,11 +339,15 @@ export async function createTaskService({ app_acronym, task_name, task_descripti
             t.task_name,
             t.task_description,
             t.task_note,
+            t.plan_id,
+            p.plan_name,
             t.task_created_at,
             t.task_update_at,
-            ts.task_state_name AS task_state
+            ts.task_state_name AS task_state,
+            ts.slug AS task_state_slug
         FROM tasks t
         JOIN task_states ts ON ts.id = t.task_state_id
+        LEFT JOIN plans p ON p.plan_id = t.plan_id
         WHERE t.task_id = ?
         LIMIT 1
         `,
@@ -319,7 +369,9 @@ export async function createTaskService({ app_acronym, task_name, task_descripti
 }
 
 // task update function
-export async function updateTaskService({ task_id, task_description, actorUserId }) {
+export async function updateTaskService({ app_acronym, task_id, plan_name, actorUserId }) {
+  const cleanAcronym = requireCleanAppAcronym(app_acronym);
+
   // validate task id
   if (!task_id || String(task_id).trim() === "") {
     const err = new Error("Task id is required");
@@ -329,28 +381,30 @@ export async function updateTaskService({ task_id, task_description, actorUserId
 
   const cleanTaskId = String(task_id).trim();
 
-  // validate description presence
-  if (task_description === undefined) {
-    const err = new Error("No fields provided to update");
-    err.status = 400;
-    throw err;
-  }
-
-  const cleanTaskDescription = task_description == null ? null : String(task_description).trim();
+  const cleanPlanName = plan_name == null ? null : String(plan_name).trim();
 
   const conn = await pool.getConnection();
 
   try {
     await conn.beginTransaction();
 
+    const app = await getAppByAcronymForUpdate(conn, cleanAcronym);
+    // check for application completion state
+    ensureAppNotCompleted(app);
+
     // 1) ensure task exists
     const [[existingTask]] = await conn.query(
       `
       SELECT
         t.task_id,
+        t.app_id,
         t.task_description,
         t.task_note,
-        ts.slug AS task_state_slug
+        t.plan_id,
+        t.creator,
+        ts.id AS task_state_id,
+        ts.slug AS task_state_slug,
+        ts.task_state_name
       FROM tasks t
       JOIN task_states ts ON ts.id = t.task_state_id
       WHERE t.task_id = ?
@@ -365,6 +419,11 @@ export async function updateTaskService({ task_id, task_description, actorUserId
       err.status = 404;
       throw err;
     }
+    if (Number(existingTask.creator) !== Number(actorUserId)) {
+      const err = new Error("You can only update tasks that you created");
+      err.status = 403;
+      throw err;
+    }
 
     // check for task completion
     ensureTaskNotClosed(existingTask);
@@ -373,12 +432,26 @@ export async function updateTaskService({ task_id, task_description, actorUserId
     // get actor username
     const actor = await getUserRow(conn, actorUserId);
 
+    // get plan id
+    let nextPlanId = existingTask.plan_id;
+
     // get default OPEN task state
     const openState = await getTaskStateRow(conn, "OPEN");
 
     // get update time
     const updateAtTimestamp = new Date().toLocaleString("sv-SE", { timeZone: "Asia/Singapore" });
-    const updateLine = `[ ${updateAtTimestamp}, Task state: ${openState.task_state_name} ] Project Lead ${actor.username} updated the description from <${existingTask.task_description}> to <${cleanTaskDescription}>.`;
+
+    // set note based on plan assigned or not
+    let updateLine = "";
+    // if plan selected, task state -> to do
+    if (cleanPlanName) {
+      const selectedPlan = await getPlanByNameForTask(conn, existingTask.app_id, cleanPlanName);
+      nextPlanId = selectedPlan.plan_id;
+      const withPlanNote = `[ ${updateAtTimestamp}, Task state: ${openState.task_state_name} ] Project Lead ${actor.username} assigned task to plan <${selectedPlan.plan_name}>.`;
+      updateLine = withPlanNote;
+    } else {
+      nextPlanId = null;
+    }
 
     const nextNote = existingTask.task_note ? `${existingTask.task_note}\n${updateLine}` : updateLine;
 
@@ -387,11 +460,11 @@ export async function updateTaskService({ task_id, task_description, actorUserId
       `
       UPDATE tasks
       SET
-        task_description = ?,
+        plan_id = ?,
         task_note = ?
       WHERE task_id = ?
       `,
-      [cleanTaskDescription, nextNote, cleanTaskId],
+      [nextPlanId, nextNote, cleanTaskId],
     );
 
     // 4) fetch updated task
@@ -405,21 +478,22 @@ export async function updateTaskService({ task_id, task_description, actorUserId
         t.task_description,
         t.task_note,
         t.plan_id,
+        p.plan_name,
         t.task_created_at,
         t.task_taken_at,
         t.task_update_at,
         ts.task_state_name AS task_state,
+        ts.slug AS task_state_slug,
         ts.id AS task_state_id,
-
         c.id AS creator_id,
         c.username AS creator_username,
-
         d.id AS developer_id,
         d.username AS developer_username
       FROM tasks t
       JOIN task_states ts ON ts.id = t.task_state_id
       JOIN users c ON c.id = t.creator
       LEFT JOIN users d ON d.id = t.developer
+      LEFT JOIN plans p ON p.plan_id = t.plan_id
       WHERE t.task_id = ?
       LIMIT 1
       `,
@@ -441,7 +515,7 @@ export async function updateTaskService({ task_id, task_description, actorUserId
 }
 
 // plan creation function
-export async function createPlanService({ app_acronym, plan_name, plan_startDate, plan_endDate, task_ids = [], actorUserId }) {
+export async function createPlanService({ app_acronym, plan_name, plan_startDate, plan_endDate, actorUserId }) {
   const cleanAcronym = requireCleanAppAcronym(app_acronym);
 
   if (!plan_name || String(plan_name).trim() === "") {
@@ -457,12 +531,6 @@ export async function createPlanService({ app_acronym, plan_name, plan_startDate
   }
   if (plan_startDate > plan_endDate) {
     const err = new Error("Plan end date must be later than start date");
-    err.status = 400;
-    throw err;
-  }
-
-  if (!Array.isArray(task_ids) || task_ids.length === 0) {
-    const err = new Error("At least one task must be selected");
     err.status = 400;
     throw err;
   }
@@ -516,60 +584,6 @@ export async function createPlanService({ app_acronym, plan_name, plan_startDate
       throw err;
     }
 
-    // 3) Get TODO task state
-    const todoState = await getTaskStateRow(conn, "TODO");
-
-    // 4) Get OPEN task state
-    const openState = await getTaskStateRow(conn, "OPEN");
-
-    // 5) Validate tasks
-    // retrieves all tasks the user selected
-    const [taskRows] = await conn.query(
-      `
-      SELECT
-        task_id,
-        app_id,
-        plan_id,
-        task_state_id,
-        task_note
-      FROM tasks
-      WHERE task_id IN (?)
-      FOR UPDATE
-      `,
-      // "FOR UPDATE" locks the rows until transaction finishes (to prevent race conditions)
-      [task_ids],
-    );
-
-    if (taskRows.length !== task_ids.length) {
-      // ensures all requested task exist in db
-      const found = new Set(taskRows.map((t) => t.task_id));
-      const missing = task_ids.filter((id) => !found.has(id));
-      const err = new Error(`Task(s) not found: ${missing.join(", ")}`);
-      err.status = 404;
-      throw err;
-    }
-
-    for (const task of taskRows) {
-      // ensures tasks belong to correct application
-      if (task.app_id !== app_id) {
-        const err = new Error(`Task ${task.task_id} does not belong to this application`);
-        err.status = 400;
-        throw err;
-      }
-      // ensures task not already assigned to another plan
-      if (task.plan_id) {
-        const err = new Error(`Task ${task.task_id} is already assigned to a plan`);
-        err.status = 409;
-        throw err;
-      }
-      // ensures task state is still OPEN
-      if (task.task_state_id !== openState.id) {
-        const err = new Error(`Only OPEN tasks can be added to a plan. Task ${task.task_id} is not OPEN`);
-        err.status = 400;
-        throw err;
-      }
-    }
-
     // End of validations =============================================
 
     // 1) Generate plan number and plan id
@@ -592,48 +606,7 @@ export async function createPlanService({ app_acronym, plan_name, plan_startDate
       [plan_id, app_id, plan_no, cleanPlanName, plan_startDate, plan_endDate, actorUserId],
     );
 
-    // 2) Build appended note
-    // get actor username
-    const actor = await getUserRow(conn, actorUserId);
-
-    // get task state name
-    const [[taskState]] = await conn.query(
-      `
-      SELECT task_state_name
-      FROM task_states
-      WHERE id = ?
-      LIMIT 1
-      `,
-      [todoState.id],
-    );
-    if (!taskState) {
-      const err = new Error("Task state not found");
-      err.status = 404;
-      throw err;
-    }
-
-    // get update time
-    const updateAtTimestamp = new Date().toLocaleString("sv-SE", { timeZone: "Asia/Singapore" });
-    const updateLine = `[ ${updateAtTimestamp}, Task state: ${taskState.task_state_name} ] Project Manager ${actor.username} assigned task to plan "${cleanPlanName}".`;
-
-    // 3) Assign task(s) into plan & update task(s) state OPEN -> TODO
-    for (const task of taskRows) {
-      const nextNote = task.task_note ? `${task.task_note}\n${updateLine}` : updateLine;
-
-      await conn.query(
-        `
-        UPDATE tasks
-        SET
-          plan_id = ?,
-          task_state_id = ?,
-          task_note = ?
-        WHERE task_id = ?
-        `,
-        [plan_id, todoState.id, nextNote, task.task_id],
-      );
-    }
-
-    // 4) Increase Rnumber_plan
+    // 2) Increase Rnumber_plan
     await conn.query(
       `
       UPDATE applications
@@ -643,7 +616,7 @@ export async function createPlanService({ app_acronym, plan_name, plan_startDate
       [app_id],
     );
 
-    // 5) Read created plan
+    // 3) Read created plan
     const [[createdPlan]] = await conn.query(
       `
       SELECT
@@ -668,7 +641,6 @@ export async function createPlanService({ app_acronym, plan_name, plan_startDate
     return {
       message: "Plan created successfully",
       plan: createdPlan,
-      assigned_task_ids: task_ids,
     };
   } catch (err) {
     await conn.rollback();
