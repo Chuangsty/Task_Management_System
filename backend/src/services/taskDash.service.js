@@ -649,4 +649,29 @@ export async function createPlanService({ app_acronym, plan_name, plan_startDate
     conn.release();
   }
 }
+
+export async function listPlansService(app_acronym) {
+  const cleanAcronym = requireCleanAppAcronym(app_acronym);
+
+  const [plans] = await pool.query(
+    `
+    SELECT
+      p.plan_id,
+      p.plan_no,
+      p.plan_name,
+      p.plan_startDate,
+      p.plan_endDate,
+      p.creator,
+      u.username AS creator_username
+    FROM plans p
+    JOIN applications a ON a.app_id = p.app_id
+    JOIN users u ON u.id = p.creator
+    WHERE a.app_acronym = ?
+    ORDER BY p.plan_no ASC
+    `,
+    [cleanAcronym],
+  );
+
+  return { plans };
+}
 // ===========================================================================================================

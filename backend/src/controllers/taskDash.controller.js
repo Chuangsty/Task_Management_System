@@ -1,4 +1,4 @@
-import { listTasksService, createTaskService, updateTaskService, createPlanService } from "../services/taskDash.service.js";
+import { listTasksService, createTaskService, updateTaskService, createPlanService, listPlansService } from "../services/taskDash.service.js";
 
 // START of task controller ==========================================
 export async function listTasksController(req, res, next) {
@@ -65,6 +65,16 @@ export async function createPlanController(req, res, next) {
     });
 
     res.status(201).json(result);
+  } catch (err) {
+    next(err);
+  }
+}
+
+export async function listPlansController(req, res, next) {
+  try {
+    const app_acronym = req.params.appAcronym;
+    const result = await listPlansService(app_acronym);
+    res.json(result);
   } catch (err) {
     next(err);
   }

@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { listTasksController, createTaskController, updateTaskController, createPlanController } from "../controllers/taskDash.controller.js";
+import { listTasksController, createTaskController, updateTaskController, createPlanController, listPlansController } from "../controllers/taskDash.controller.js";
 import { requireAuth } from "../middleware/auth.middleware.js";
 import { requireAppPermit } from "../middleware/permit.middleware.js";
 
@@ -14,7 +14,9 @@ router.post("/apps/:appAcronym/tasks", requireAuth, requireAppPermit("permit_Ope
 router.patch("/apps/:appAcronym/tasks/:taskId", requireAuth, requireAppPermit("permit_Open"), updateTaskController);
 
 // PLAN features ======================================================================================
-// POST /api/apps/:appId/plan
-router.post("/apps/:appAcronym/plan", requireAuth, requireAppPermit("permit_toDo"), createPlanController);
+// POST /api/apps/:appAcronym/plans
+router.post("/apps/:appAcronym/plans", requireAuth, requireAppPermit("permit_toDo"), createPlanController);
+// GET /api/apps/:appAcronym/plans
+router.get("/apps/:appAcronym/plans", requireAuth, listPlansController);
 
 export default router;

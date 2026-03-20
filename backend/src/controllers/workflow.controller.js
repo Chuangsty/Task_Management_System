@@ -1,4 +1,4 @@
-import { takeTaskService, forfeitTaskService, submitTaskService, rejectTaskService, approveTaskService, updateTaskNoteService } from "../services/workflow.service.js";
+import { takeTaskService, forfeitTaskService, submitTaskService, rejectTaskService, approveTaskService, updateTaskNoteService, releaseTaskService } from "../services/workflow.service.js";
 
 export async function takeTaskController(req, res, next) {
   try {
@@ -67,6 +67,17 @@ export async function updateTaskNoteController(req, res, next) {
     });
 
     res.json(result);
+  } catch (err) {
+    next(err);
+  }
+}
+
+export async function releaseTaskController(req, res, next) {
+  try {
+    const task_id = req.params.taskId;
+    const tasks = await releaseTaskService({ task_id, actorUserId: req.user.id });
+
+    res.json(tasks);
   } catch (err) {
     next(err);
   }

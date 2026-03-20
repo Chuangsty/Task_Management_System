@@ -147,47 +147,47 @@ async function readTaskDetails(conn, task_id) {
 }
 
 // Update application state to complete upon all tasks complete
-async function updateApplicationCompletionState(conn, app_id) {
-  const [[openTaskCountRow]] = await conn.query(
-    `
-    SELECT COUNT(*) AS open_task_count
-    FROM tasks t
-    JOIN task_states ts ON ts.id = t.task_state_id
-    WHERE t.app_id = ?
-      AND ts.slug <> 'CLOSED'
-    `,
-    [app_id],
-  );
+// async function updateApplicationCompletionState(conn, app_id) {
+//   const [[openTaskCountRow]] = await conn.query(
+//     `
+//     SELECT COUNT(*) AS open_task_count
+//     FROM tasks t
+//     JOIN task_states ts ON ts.id = t.task_state_id
+//     WHERE t.app_id = ?
+//       AND ts.slug <> 'CLOSED'
+//     `,
+//     [app_id],
+//   );
 
-  const [[app]] = await conn.query(
-    `
-    SELECT app_id, state_id
-    FROM applications
-    WHERE app_id = ?
-    LIMIT 1
-    FOR UPDATE
-    `,
-    [app_id],
-  );
+//   const [[app]] = await conn.query(
+//     `
+//     SELECT app_id, state_id
+//     FROM applications
+//     WHERE app_id = ?
+//     LIMIT 1
+//     FOR UPDATE
+//     `,
+//     [app_id],
+//   );
 
-  if (!app) return;
+//   if (!app) return;
 
-  const completedState = await getAppStateRow(conn, "COMPLETED");
-  const ongoingState = await getAppStateRow(conn, "ON_GOING");
+//   const completedState = await getAppStateRow(conn, "COMPLETED");
+//   const ongoingState = await getAppStateRow(conn, "ON_GOING");
 
-  const nextStateId = Number(openTaskCountRow.open_task_count) === 0 ? completedState.id : ongoingState.id;
+//   const nextStateId = Number(openTaskCountRow.open_task_count) === 0 ? completedState.id : ongoingState.id;
 
-  if (app.state_id !== nextStateId) {
-    await conn.query(
-      `
-      UPDATE applications
-      SET state_id = ?
-      WHERE app_id = ?
-      `,
-      [nextStateId, app_id],
-    );
-  }
-}
+//   if (app.state_id !== nextStateId) {
+//     await conn.query(
+//       `
+//       UPDATE applications
+//       SET state_id = ?
+//       WHERE app_id = ?
+//       `,
+//       [nextStateId, app_id],
+//     );
+//   }
+// }
 
 // task developer check
 function taskDeveloper(task, actorUserId, actionText) {
@@ -313,8 +313,8 @@ async function runTaskTransition({
     // update task fields
     await updateTaskRow(conn, cleanTaskId, updateFields);
 
-    // re-check application completion state
-    await updateApplicationCompletionState(conn, task.app_id);
+    // // re-check application completion state
+    // await updateApplicationCompletionState(conn, task.app_id);
 
     // fetch updated task
     const updatedTask = await readTaskDetails(conn, cleanTaskId);
@@ -617,6 +617,147 @@ export async function updateTaskNoteService({ task_id, note, actorUserId }) {
 
     return {
       message: "Note added successfully",
+      task: updatedTask,
+    };
+  } catch (err) {
+    await conn.rollback();
+    throw err;
+  } finally {
+    conn.release();
+  }
+}
+
+// release task function
+export async function releaseTaskService({ task_id, actorUserId }) {
+  if (!task_id || String(task_id).trim() === "") {
+    const err = new Error("Task id is required");
+    err.status = 400;
+    throw err;
+  }
+
+  const cleanTaskId = String(task_id).trim();
+  const conn = await pool.getConnection();
+
+  try {
+    await conn.beginTransaction();
+
+    const [[existingTask]] = await conn.query(
+      `
+      SELECT
+        t.task_id,
+        t.app_id,
+        t.task_note,
+        t.plan_id,
+        t.creator,
+        ts.id AS task_state_id,
+        ts.slug AS task_state_slug,
+        ts.task_state_name
+      FROM tasks t
+      JOIN task_states ts ON ts.id = t.task_state_id
+      WHERE t.task_id = ?
+      LIMIT 1
+      FOR UPDATE
+      `,
+      [cleanTaskId],
+    );
+
+    if (!existingTask) {
+      const err = new Error("Task not found");
+      err.status = 404;
+      throw err;
+    }
+
+    if (!existingTask.plan_id) {
+      const err = new Error("Task must be assigned to a plan before release");
+      err.status = 400;
+      throw err;
+    }
+
+    if (existingTask.task_state_slug !== "OPEN") {
+      const err = new Error("Only OPEN tasks can be released");
+      err.status = 400;
+      throw err;
+    }
+
+    const [[app]] = await conn.query(
+      `
+      SELECT
+        a.app_id,
+        a.app_acronym,
+        a.project_lead,
+        s.slug AS app_state_slug
+      FROM applications a
+      JOIN states s ON s.id = a.state_id
+      WHERE a.app_id = ?
+      LIMIT 1
+      FOR UPDATE
+      `,
+      [existingTask.app_id],
+    );
+
+    if (!app) {
+      const err = new Error("Application not found");
+      err.status = 404;
+      throw err;
+    }
+
+    const actor = await getUserRow(conn, actorUserId);
+    const todoState = await getTaskStateRow(conn, "TODO");
+
+    const updateAtTimestamp = new Date().toLocaleString("sv-SE", { timeZone: "Asia/Singapore" });
+
+    const releaseLine = `[ ${updateAtTimestamp}, Task state: ${todoState.task_state_name} ] Project Lead ${actor.username} released task.`;
+
+    const nextNote = existingTask.task_note ? `${existingTask.task_note}\n${releaseLine}` : releaseLine;
+
+    await conn.query(
+      `
+      UPDATE tasks
+      SET
+        task_state_id = ?,
+        task_note = ?,
+        task_update_at = CURRENT_TIMESTAMP
+      WHERE task_id = ?
+      `,
+      [todoState.id, nextNote, cleanTaskId],
+    );
+
+    const [[updatedTask]] = await conn.query(
+      `
+      SELECT
+        t.task_id,
+        t.app_id,
+        t.task_no,
+        t.task_name,
+        t.task_description,
+        t.task_note,
+        t.plan_id,
+        p.plan_name,
+        t.task_created_at,
+        t.task_taken_at,
+        t.task_update_at,
+        ts.task_state_name AS task_state,
+        ts.slug AS task_state_slug,
+        ts.id AS task_state_id,
+        c.id AS creator_id,
+        c.username AS creator_username,
+        d.id AS developer_id,
+        d.username AS developer_username
+      FROM tasks t
+      JOIN task_states ts ON ts.id = t.task_state_id
+      JOIN users c ON c.id = t.creator
+      LEFT JOIN users d ON d.id = t.developer
+      LEFT JOIN plans p ON p.plan_id = t.plan_id
+      WHERE t.task_id = ?
+      LIMIT 1
+      `,
+      [cleanTaskId],
+    );
+
+    await conn.commit();
+
+    return {
+      message: "Task released successfully",
       task: updatedTask,
     };
   } catch (err) {

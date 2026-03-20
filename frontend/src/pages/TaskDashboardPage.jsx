@@ -24,8 +24,9 @@ function TaskCard({ task, onClick }) {
     >
       <div className="taskCard__id">{task.task_id}</div>
 
-      <div className="taskCard__line">Task: {task.task_name || "-"}</div>
-      <div className="taskCard__line">Dev: {task.developer_username || "-"}</div>
+      <div className="taskCard__line">Task Name: {task.task_name || "-"}</div>
+      <div className="taskCard__line">Plan Name: {task.plan_name || "-"}</div>
+      <div className="taskCard__line">Dev Name: {task.developer_username || "-"}</div>
     </div>
   );
 }
@@ -50,14 +51,20 @@ export default function TaskDashboardPage() {
   const [taskForm, setTaskForm] = useState({
     task_name: "",
     task_description: "",
+    plan_name: "",
   });
 
   // Task detail dialog
   const [openTaskDetailDialog, setOpenTaskDetailDialog] = useState(false);
   const [selectedTask, setSelectedTask] = useState(null);
+  // plan assignment feature
+  const [plans, setPlans] = useState([]);
+  const [selectedPlanName, setSelectedPlanName] = useState("");
+  const [updatingTask, setUpdatingTask] = useState(false);
   // Note input feature
   const [noteInput, setNoteInput] = useState("");
-  const [savingNote, setSavingNote] = useState(false);
+  // releasing of task
+  const [releasingTask, setReleasingTask] = useState(false);
   // taking of task
   const [takingTask, setTakingTask] = useState(false);
   // forfeiting and submitting of task
@@ -74,15 +81,7 @@ export default function TaskDashboardPage() {
     plan_name: "",
     plan_startDate: "",
     plan_endDate: "",
-    task_ids: [], // task selection
   });
-  const selectableTasks = useMemo(() => {
-    return tasks.filter((task) => {
-      const isOpen = String(task.task_state || "").toUpperCase() === "OPEN";
-      const hasNoPlan = !task.plan_name;
-      return isOpen && hasNoPlan;
-    });
-  }, [tasks]);
 
   const [toast, setToast] = useState({
     open: false,
@@ -99,21 +98,32 @@ export default function TaskDashboardPage() {
     }));
   }, [taskStates]);
 
-  // const isProjectManager = roles.includes("PROJECT_MANAGER");
-
   // ability to create task
   // if appInfo?.permit_Open is PROJECT_LEAD
   // if roles.includes(appInfo.permit_Open) is PROJECT_LEAD
   const canCreateTask = Boolean(appInfo?.permit_Open) && roles.includes(appInfo.permit_Open);
   // ability to create plan
   const canCreatePlan = Boolean(appInfo?.permit_toDo) && roles.includes(appInfo.permit_toDo);
+  // ability to release task for taking
+  const canReleaseTask = Boolean(appInfo?.permit_toDo) && roles.includes(appInfo.permit_toDo);
   // ability to take task
   const canTakeTask = Boolean(appInfo?.permit_Doing) && roles.includes(appInfo.permit_Doing);
   // ability to submit task for review
   const canSubmitTask = Boolean(appInfo?.permit_Done) && roles.includes(appInfo.permit_Done);
 
+  const isAppCompleted = String(appInfo?.app_state_slug || "").toUpperCase() === "COMPLETED";
+
   const isTaskClosed = String(selectedTask?.task_state_slug || "").toUpperCase() === "CLOSED";
 
+  // for plan selection
+  const planOptions = useMemo(() => {
+    return plans
+      .map((plan) => String(plan.plan_name || "").trim())
+      .filter((name) => name !== "")
+      .sort((a, b) => a.localeCompare(b));
+  }, [plans]);
+
+  // for note input
   const noteLines = useMemo(() => {
     if (!selectedTask?.task_note) return [];
 
@@ -125,11 +135,21 @@ export default function TaskDashboardPage() {
 
   // Task Creation Helper Functions
   function handleOpenTaskDialog() {
-    setTaskForm({
-      task_name: "",
-      task_description: "",
-    });
-    setOpenTaskDialog(true);
+    if (isAppCompleted) {
+      setToast({
+        open: true,
+        severity: "error",
+        message: "Unable to create task in a completed application",
+      });
+      return;
+    } else {
+      setTaskForm({
+        task_name: "",
+        task_description: "",
+        plan_name: "",
+      });
+      setOpenTaskDialog(true);
+    }
   }
   function handleCloseTaskDialog() {
     if (creatingTask) return;
@@ -140,45 +160,57 @@ export default function TaskDashboardPage() {
   function handleOpenTaskDetail(task) {
     setSelectedTask(task);
     setNoteInput("");
+    setSelectedPlanName(task?.plan_name || "");
     setOpenTaskDetailDialog(true);
   }
   // Note input feature inside task detail viewer
-  async function handleSaveNote() {
-    const cleanNote = noteInput.trim();
-
+  async function handleUpdateTask() {
     if (!selectedTask?.task_id) return;
 
-    if (!cleanNote) {
+    const cleanNote = noteInput.trim();
+
+    const originalPlanName = selectedTask?.plan_name || "";
+    const cleanPlanName = selectedPlanName.trim();
+
+    const hasNoteChange = cleanNote !== "";
+    const hasPlanChange = cleanPlanName !== originalPlanName;
+
+    if (!hasNoteChange && !hasPlanChange) {
       setToast({
         open: true,
         severity: "error",
-        message: "Note cannot be empty",
+        message: "No changes to update",
       });
       return;
     }
 
     try {
-      setSavingNote(true);
+      setUpdatingTask(true);
 
-      // Change this endpoint to match your backend route
-      const res = await api.patch(`/api/tasks/${selectedTask.task_id}/note`, {
-        note: cleanNote,
-      });
+      // let latestTask = selectedTask;
 
-      const updatedTask = res.data?.task;
-
-      if (updatedTask) {
-        setSelectedTask(updatedTask);
-
-        setTasks((prev) => prev.map((task) => (task.task_id === updatedTask.task_id ? updatedTask : task)));
+      // 1) update task plan
+      if (hasPlanChange) {
+        await api.patch(`/api/apps/${appAcronym}/tasks/${selectedTask.task_id}`, {
+          plan_name: cleanPlanName || null,
+        });
       }
+
+      // 2) update note
+      if (hasNoteChange) {
+        await api.patch(`/api/tasks/${selectedTask.task_id}/note`, {
+          note: cleanNote,
+        });
+      }
+
+      await refreshTaskInDialog(selectedTask.task_id);
 
       setNoteInput("");
 
       setToast({
         open: true,
         severity: "success",
-        message: "Note added successfully",
+        message: "Update successful",
       });
     } catch (err) {
       setToast({
@@ -187,7 +219,7 @@ export default function TaskDashboardPage() {
         message: err?.response?.data?.error || "Failed to save note",
       });
     } finally {
-      setSavingNote(false);
+      setUpdatingTask(false);
     }
   }
 
@@ -195,6 +227,8 @@ export default function TaskDashboardPage() {
   function handleCloseTaskDetail() {
     setOpenTaskDetailDialog(false);
     setSelectedTask(null);
+    setNoteInput("");
+    setSelectedPlanName("");
   }
 
   function formatDisplayDate(value) {
@@ -216,7 +250,6 @@ export default function TaskDashboardPage() {
       plan_name: "",
       plan_startDate: "",
       plan_endDate: "",
-      task_ids: [], // task selection
     });
     setOpenPlanDialog(true);
   }
@@ -227,8 +260,12 @@ export default function TaskDashboardPage() {
 
   // Task Creation Function
   async function handleCreateTask() {
-    const cleanTaskName = taskForm.task_name.trim();
+    const trimTaskName = taskForm.task_name.trim();
+    const cleanTaskName = trimTaskName.charAt(0).toUpperCase() + trimTaskName.slice(1);
+
     const cleanTaskDescription = taskForm.task_description.trim();
+
+    const cleanPlanName = taskForm.plan_name.trim();
 
     if (!cleanTaskName) {
       setToast({
@@ -244,6 +281,7 @@ export default function TaskDashboardPage() {
       await api.post(`/api/apps/${appAcronym}/tasks`, {
         task_name: cleanTaskName,
         task_description: cleanTaskDescription,
+        plan_name: cleanPlanName || null,
       });
 
       setOpenTaskDialog(false);
@@ -255,6 +293,7 @@ export default function TaskDashboardPage() {
       });
 
       await loadTasks();
+      await loadPlans();
     } catch (err) {
       setToast({
         open: true,
@@ -294,22 +333,13 @@ export default function TaskDashboardPage() {
       });
       return;
     }
-    if (!Array.isArray(planForm.task_ids) || planForm.task_ids.length === 0) {
-      setToast({
-        open: true,
-        severity: "error",
-        message: "Select at least one task",
-      });
-      return;
-    }
     try {
       setCreatingPlan(true);
 
-      await api.post(`/api/apps/${appAcronym}/plan`, {
+      await api.post(`/api/apps/${appAcronym}/plans`, {
         plan_name: cleanPlanName,
         plan_startDate: planForm.plan_startDate,
         plan_endDate: planForm.plan_endDate,
-        task_ids: planForm.task_ids,
       });
 
       setOpenPlanDialog(false);
@@ -320,6 +350,7 @@ export default function TaskDashboardPage() {
         message: "Plan created successfully",
       });
       await loadTasks();
+      await loadPlans();
     } catch (err) {
       setToast({
         open: true,
@@ -341,6 +372,33 @@ export default function TaskDashboardPage() {
     setTaskStates(Array.isArray(res.data?.taskStates) ? res.data.taskStates : []);
     setAppInfo(res.data?.app || null);
     setSelectedTask(latestTask);
+  }
+
+  // project manager release task
+  async function handleReleaseTask() {
+    if (!selectedTask?.task_id) return;
+
+    try {
+      setReleasingTask(true);
+
+      await api.post(`/api/tasks/${selectedTask.task_id}/release`);
+      await refreshTaskInDialog(selectedTask.task_id);
+      handleCloseTaskDetail();
+
+      setToast({
+        open: true,
+        severity: "success",
+        message: "Task released successfully",
+      });
+    } catch (err) {
+      setToast({
+        open: true,
+        severity: "error",
+        message: err?.response?.data?.error || "Failed to release task",
+      });
+    } finally {
+      setReleasingTask(false);
+    }
   }
 
   // dev take task
@@ -478,6 +536,11 @@ export default function TaskDashboardPage() {
     }
   }
 
+  async function loadPlans() {
+    const res = await api.get(`/api/apps/${appAcronym}/plans`);
+    setPlans(Array.isArray(res.data?.plans) ? res.data.plans : []);
+  }
+
   async function loadTasks() {
     setErrMsg("");
     setLoading(true);
@@ -507,6 +570,7 @@ export default function TaskDashboardPage() {
   useEffect(() => {
     if (!appAcronym) return;
     loadTasks();
+    loadPlans();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [appAcronym]);
 
@@ -634,29 +698,6 @@ export default function TaskDashboardPage() {
             {/* End date */}
             <TextField fullWidth margin="normal" label="End Date *" type="date" value={planForm.plan_endDate} onChange={(e) => setPlanForm((p) => ({ ...p, plan_endDate: e.target.value }))} slotProps={{ inputLabel: { shrink: true } }} />
           </Box>
-
-          {/* Task(s) input/selection */}
-          <FormControl fullWidth margin="normal">
-            <InputLabel>Task(s) *</InputLabel>
-            <Select
-              multiple
-              label="Task(s) *"
-              value={planForm.task_ids}
-              onChange={(e) => {
-                const value = e.target.value;
-                setPlanForm((p) => ({
-                  ...p,
-                  task_ids: typeof value === "string" ? value.split(",") : value,
-                }));
-              }}
-            >
-              {selectableTasks.map((task) => (
-                <MenuItem key={task.task_id + task.task_name} value={task.task_id}>
-                  {`${task.task_id}: ${task.task_name}`}
-                </MenuItem>
-              ))}
-            </Select>
-          </FormControl>
         </DialogContent>
 
         <DialogActions>
@@ -670,41 +711,121 @@ export default function TaskDashboardPage() {
       </Dialog>
 
       {/* Task creation dialog */}
-      <Dialog open={openTaskDialog} onClose={handleCloseTaskDialog} fullWidth maxWidth="sm">
-        <DialogTitle>Create New Task</DialogTitle>
+      <Dialog open={openTaskDialog} onClose={handleCloseTaskDialog} fullWidth maxWidth="lg">
+        <DialogTitle className="taskDetailDialog__title">
+          <div className="taskDetailDialog__header">NEW TASK</div>
+        </DialogTitle>
 
-        <DialogContent dividers>
-          <TextField
-            fullWidth
-            margin="normal"
-            label="Task Name"
-            value={taskForm.task_name}
-            onChange={(e) =>
-              setTaskForm((prev) => ({
-                ...prev,
-                task_name: e.target.value,
-              }))
-            }
-          />
+        <DialogContent dividers className="taskDetailDialog__content">
+          <div className="taskDetailDialog__layout">
+            {/* Left panel */}
+            <div className="taskDetailDialog__left">
+              <div className="taskDetailDialog__fieldList">
+                <div className="taskDetailDialog__fieldRow taskDetailDialog__fieldRow--text">
+                  <Typography fontWeight="bold">Task Name</Typography>
+                  <TextField
+                    fullWidth
+                    size="small"
+                    value={taskForm.task_name}
+                    onChange={(e) =>
+                      setTaskForm((prev) => ({
+                        ...prev,
+                        task_name: e.target.value,
+                      }))
+                    }
+                  />
+                </div>
 
-          <TextField
-            fullWidth
-            margin="normal"
-            label="Task Description"
-            multiline
-            minRows={4}
-            value={taskForm.task_description}
-            onChange={(e) =>
-              setTaskForm((prev) => ({
-                ...prev,
-                task_description: e.target.value,
-              }))
-            }
-          />
+                <div className="taskDetailDialog__fieldRow">
+                  <Typography fontWeight="bold">Task Description</Typography>
+                  <Paper className="taskDetailDialog__descriptionBox" elevation={0}>
+                    <TextField
+                      fullWidth
+                      multiline
+                      minRows={4}
+                      variant="standard"
+                      value={taskForm.task_description}
+                      onChange={(e) =>
+                        setTaskForm((prev) => ({
+                          ...prev,
+                          task_description: e.target.value,
+                        }))
+                      }
+                      slotProps={{ input: { disableUnderline: true } }}
+                    />
+                  </Paper>
+                </div>
+
+                <div className="taskDetailDialog__fieldRow taskDetailDialog__fieldRow--text">
+                  <Typography fontWeight="bold">Plan Name</Typography>
+                  <FormControl fullWidth size="small">
+                    <InputLabel>Plan Name</InputLabel>
+                    <Select
+                      label="Plan Name"
+                      value={taskForm.plan_name}
+                      onChange={(e) =>
+                        setTaskForm((prev) => ({
+                          ...prev,
+                          plan_name: e.target.value,
+                        }))
+                      }
+                    >
+                      <MenuItem value="">
+                        <em>Unassigned</em>
+                      </MenuItem>
+
+                      {planOptions.map((planName) => (
+                        <MenuItem key={planName} value={planName}>
+                          {planName}
+                        </MenuItem>
+                      ))}
+                    </Select>
+                  </FormControl>
+                </div>
+
+                <div className="taskDetailDialog__fieldRow taskDetailDialog__fieldRow--text">
+                  <Typography fontWeight="bold">Task State</Typography>
+                  <Typography>{selectedTask?.task_state || "-"}</Typography>
+                </div>
+
+                <div className="taskDetailDialog__fieldRow taskDetailDialog__fieldRow--text">
+                  <Typography fontWeight="bold">Task Creator</Typography>
+                  <Typography>-</Typography>
+                </div>
+
+                <div className="taskDetailDialog__fieldRow taskDetailDialog__fieldRow--text">
+                  <Typography fontWeight="bold">Task Developer</Typography>
+                  <Typography>{selectedTask?.developer_username || "Unassigned"}</Typography>
+                </div>
+
+                <div className="taskDetailDialog__fieldRow taskDetailDialog__fieldRow--text">
+                  <Typography fontWeight="bold">Task Create Date</Typography>
+                  <Typography>{formatDisplayDate(selectedTask?.created_at || selectedTask?.task_created_at)}</Typography>
+                </div>
+              </div>
+            </div>
+
+            {/* Right panel */}
+            <div className="taskDetailDialog__right">
+              <div>
+                <Typography fontWeight="bold" className="taskDetailDialog__notesTitle">
+                  Notes
+                </Typography>
+
+                <Paper variant="outlined" className="taskDetailDialog__notesBox">
+                  <Typography className="taskDetailDialog__noteLine">Notes will be auto-generated after task creation.</Typography>
+                </Paper>
+              </div>
+
+              <div className="taskDetailDialog__notesWrap">
+                <TextField fullWidth multiline minRows={4} label="Input Notes" value="" disabled />
+              </div>
+            </div>
+          </div>
         </DialogContent>
 
-        <DialogActions>
-          <Button onClick={handleCloseTaskDialog} disabled={creatingTask}>
+        <DialogActions className="taskDetailDialog__actions">
+          <Button onClick={handleCloseTaskDialog} variant="contained" disabled={creatingTask}>
             Cancel
           </Button>
           <Button onClick={handleCreateTask} variant="contained" disabled={creatingTask}>
@@ -738,7 +859,25 @@ export default function TaskDashboardPage() {
 
                 <div className="taskDetailDialog__fieldRow taskDetailDialog__fieldRow--text">
                   <Typography fontWeight="bold">Plan Name</Typography>
-                  <Typography>{selectedTask?.plan_name || "Unassigned"}</Typography>
+
+                  {!isTaskClosed ? (
+                    <FormControl fullWidth size="small">
+                      <InputLabel>Plan Name</InputLabel>
+                      <Select label="Plan Name" value={selectedPlanName} onChange={(e) => setSelectedPlanName(e.target.value)}>
+                        <MenuItem value="">
+                          <em>Unassigned</em>
+                        </MenuItem>
+
+                        {planOptions.map((planName) => (
+                          <MenuItem key={planName} value={planName}>
+                            {planName}
+                          </MenuItem>
+                        ))}
+                      </Select>
+                    </FormControl>
+                  ) : (
+                    <Typography>{selectedTask?.plan_name || "Unassigned"}</Typography>
+                  )}
                 </div>
 
                 <div className="taskDetailDialog__fieldRow taskDetailDialog__fieldRow--text">
@@ -791,18 +930,24 @@ export default function TaskDashboardPage() {
         </DialogContent>
 
         <DialogActions className="taskDetailDialog__actions">
+          {canReleaseTask && selectedTask?.task_state_slug === "OPEN" && selectedTask?.plan_name ? (
+            <Button variant="outlined" onClick={handleReleaseTask} className="release_btn" disabled={releasingTask || updatingTask}>
+              {releasingTask ? "Releasing..." : "Release Task"}
+            </Button>
+          ) : null}
+
           {canTakeTask && selectedTask?.task_state_slug === "TODO" ? (
-            <Button variant="outlined" onClick={handleTakeTask} className="taketask_btn" disabled={takingTask || savingNote}>
+            <Button variant="outlined" onClick={handleTakeTask} className="taketask_btn" disabled={takingTask || updatingTask}>
               {takingTask ? "Taking..." : "Take Task"}
             </Button>
           ) : null}
 
           {canSubmitTask && selectedTask?.task_state_slug === "DOING" ? (
             <>
-              <Button variant="outlined" onClick={handleForfeitTask} className="forfeit_btn" disabled={forfeitingTask || savingNote}>
+              <Button variant="outlined" onClick={handleForfeitTask} className="forfeit_btn" disabled={forfeitingTask || updatingTask}>
                 {forfeitingTask ? "Forfeiting..." : "Forfeit Task"}
               </Button>
-              <Button variant="outlined" onClick={handleSubmitTask} className="submit_btn" disabled={submittingTask || savingNote}>
+              <Button variant="outlined" onClick={handleSubmitTask} className="submit_btn" disabled={submittingTask || updatingTask}>
                 {submittingTask ? "Submitting..." : "Submit Task"}
               </Button>
             </>
@@ -810,21 +955,22 @@ export default function TaskDashboardPage() {
 
           {canCreateTask && selectedTask?.task_state_slug === "DONE" ? (
             <>
-              <Button variant="outlined" onClick={handleRejectTask} className="reject_btn" disabled={rejectingTask || savingNote}>
+              <Button variant="outlined" onClick={handleRejectTask} className="reject_btn" disabled={rejectingTask || updatingTask}>
                 {rejectingTask ? "Rejecting..." : "Reject Task"}
               </Button>
-              <Button variant="outlined" onClick={handleApproveTask} className="approve_btn" disabled={approvingTask || savingNote}>
+              <Button variant="outlined" onClick={handleApproveTask} className="approve_btn" disabled={approvingTask || updatingTask}>
                 {approvingTask ? "Approving..." : "Approve Task"}
               </Button>
             </>
           ) : null}
 
           {!isTaskClosed ? (
-            <Button variant="contained" onClick={handleSaveNote} disabled={savingNote}>
-              {savingNote ? "Saving..." : "Add Note"}
+            <Button variant="contained" onClick={handleUpdateTask} disabled={updatingTask || takingTask || forfeitingTask || submittingTask || rejectingTask || approvingTask}>
+              {updatingTask ? "Updating..." : "Update"}
             </Button>
           ) : null}
-          <Button variant="contained" onClick={handleCloseTaskDetail} className=" taskDetailDialog__closeBtn" disabled={savingNote}>
+
+          <Button variant="contained" onClick={handleCloseTaskDetail} className="taskDetailDialog__closeBtn" disabled={updatingTask}>
             Close
           </Button>
         </DialogActions>

@@ -259,3 +259,8 @@
   padding: 6px 0;
   border-bottom: 1px solid #eee;
 }
+
+.taskCreateDialog__input .MuiInputBase-root,
+.taskCreateDialog__input {
+  width: 100%;
+}
