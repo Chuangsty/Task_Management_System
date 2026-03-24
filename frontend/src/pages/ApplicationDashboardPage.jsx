@@ -53,6 +53,27 @@ export default function ApplicationsDashboardPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  useEffect(() => {
+    function handleTabBack() {
+      if (document.visibilityState === "visible") {
+        loadTasks(); // or loadApps()
+      }
+    }
+
+    function handleWindowFocus() {
+      loadTasks(); // or loadApps()
+    }
+
+    document.addEventListener("visibilitychange", handleTabBack);
+    window.addEventListener("focus", handleWindowFocus);
+
+    return () => {
+      document.removeEventListener("visibilitychange", handleTabBack);
+      window.removeEventListener("focus", handleWindowFocus);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   const isProjectLead = roles.includes("PROJECT_LEAD");
 
   // Fucntion for add and edit app dialog popup

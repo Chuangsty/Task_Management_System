@@ -572,6 +572,29 @@ export default function TaskDashboardPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [appAcronym]);
 
+  useEffect(() => {
+    const refresh = () => {
+      if (
+        document.visibilityState === "visible" &&
+        !openTaskDialog &&
+        !openTaskDetailDialog
+      ) {
+        if (appAcronym) {
+          loadTasks();
+          loadPlans();
+        }
+      }
+    };
+
+    document.addEventListener("visibilitychange", refresh);
+    window.addEventListener("focus", refresh);
+
+    return () => {
+      document.removeEventListener("visibilitychange", refresh);
+      window.removeEventListener("focus", refresh);
+    };
+  }, [appAcronym, openTaskDialog, openTaskDetailDialog]);
+
   const filteredTasks = useMemo(() => {
     const s = search.trim().toLowerCase();
     if (!s) return tasks;
