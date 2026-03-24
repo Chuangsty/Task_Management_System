@@ -161,11 +161,13 @@ export default function UserManagementPage() {
       </Typography>
 
       <Paper className="usersCard">
-        {errMsg && (
+        
+        {/* mui error alert */}
+        {/* {errMsg && (
           <Alert severity="error" sx={{ mb: 2 }}>
             {errMsg}
           </Alert>
-        )}
+        )} */}
 
         <div className="usersTopRow">
           <TextField

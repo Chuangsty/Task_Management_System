@@ -55,12 +55,6 @@ export async function createAppsService({ app_name, app_startDate, app_endDate, 
   }
   // get today's date in YYYY-MM-DD
   const today = new Date().toISOString().split("T")[0];
-  // start date cannot be before current date
-  if (app_startDate < today) {
-    const err = new Error("Start date cannot be before current date");
-    err.status = 400;
-    throw err;
-  }
   // end date cannot be before start date
   if (app_startDate && app_endDate && app_startDate > app_endDate) {
     const err = new Error("End date must be later than start date");

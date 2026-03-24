@@ -467,13 +467,24 @@ export async function approveTaskService({ task_id, actorUserId }) {
 // Project Lead actions end ==========================================
 
 // Note input feature
-function ensureTaskNoteEditable(existingTask) {
-  const blockedStates = new Set(["DONE", "CLOSED"]);
+function ensureTaskNoteEditable(existingTask, actorRoles = [], permitOpenRole = null) {
+  const taskStateSlug = String(existingTask.task_state_slug || "").toUpperCase();
 
-  if (blockedStates.has(String(existingTask.task_state_slug || "").toUpperCase())) {
-    const err = new Error("Notes cannot be updated once task is DONE or CLOSED");
+  if (taskStateSlug === "CLOSED") {
+    const err = new Error("Notes cannot be updated once task is CLOSED");
     err.status = 400;
     throw err;
+  }
+
+  if (taskStateSlug === "DONE") {
+    const canEditDoneNote =
+      permitOpenRole && actorRoles.includes(String(permitOpenRole).trim());
+
+    if (!canEditDoneNote) {
+      const err = new Error("Only the permit_Open role can update notes when task is DONE");
+      err.status = 403;
+      throw err;
+    }
   }
 }
 
@@ -504,9 +515,11 @@ export async function updateTaskNoteService({ task_id, note, actorUserId }) {
         t.task_id,
         t.task_note,
         ts.task_state_name AS task_state_name,
-        ts.slug AS task_state_slug
+        ts.slug AS task_state_slug,
+        a.permit_Open
       FROM tasks t
       JOIN task_states ts ON ts.id = t.task_state_id
+      JOIN applications a ON a.app_id = t.app_id
       WHERE t.task_id = ?
       LIMIT 1
       FOR UPDATE
@@ -520,9 +533,21 @@ export async function updateTaskNoteService({ task_id, note, actorUserId }) {
       throw err;
     }
 
-    ensureTaskNoteEditable(existingTask);
-
     const actor = await getUserRow(conn, actorUserId);
+
+    const [actorRoleRows] = await conn.query(
+      `
+      SELECT r.slug
+      FROM user_roles ur
+      JOIN roles r ON r.id = ur.role_id
+      WHERE ur.user_id = ?
+      `,
+      [actorUserId],
+    );
+
+    const actorRoles = actorRoleRows.map((row) => row.slug);
+
+    ensureTaskNoteEditable(existingTask, actorRoles, existingTask.permit_Open);
 
     const timestamp = new Date().toLocaleString("sv-SE", {
       timeZone: "Asia/Singapore",

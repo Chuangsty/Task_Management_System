@@ -74,7 +74,7 @@ export async function adminCreateUserService({ username, email, password, roles 
     // Normalize username and email
     const cleanUsername = String(username).trim();
     const cleanEmail = String(email).trim().toLowerCase();
-    
+
     // Set DEFAULT ACTIVE status ID
     const [[activeStatus]] = await conn.query(`SELECT id FROM account_status WHERE slug = 'ACTIVE' LIMIT 1`);
 

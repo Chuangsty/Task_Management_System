@@ -264,3 +264,17 @@
 .taskCreateDialog__input {
   width: 100%;
 }
+
+.taskPageHeader {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  margin-bottom: 4px;
+}
+
+.pageBackBtn {
+  margin-bottom: 16px !important;
+  border-radius: 12px !important;
+  font-weight: 700 !important;
+  padding: 6px 14px !important;
+}

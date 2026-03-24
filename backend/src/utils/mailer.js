@@ -1,5 +1,7 @@
 import nodemailer from "nodemailer";
 
+const approvalEmail = process.env.MAIL_USER;
+
 const transporter = nodemailer.createTransport({
   service: "gmail",
   auth: {
@@ -13,7 +15,7 @@ export async function sendTaskForReviewEmail({ to, projectLeadName, developerNam
 
   await transporter.sendMail({
     from: process.env.MAIL_USER,
-    to: defaultEmail,
+    to: approvalEmail,
     subject: `Task submitted for review: ${taskName}`,
     text: `
         Hi ${projectLeadName},

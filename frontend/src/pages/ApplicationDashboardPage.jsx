@@ -195,11 +195,12 @@ export default function ApplicationsDashboardPage() {
       </Typography>
 
       <Paper className="appsCard">
-        {errMsg && (
+        {/* mui error alert */}
+        {/* {errMsg && (
           <Alert severity="error" sx={{ mb: 2 }}>
             {errMsg}
           </Alert>
-        )}
+        )} */}
 
         {/* Top row: Search (left) + New App (right) */}
         <div className="appsTopRow">

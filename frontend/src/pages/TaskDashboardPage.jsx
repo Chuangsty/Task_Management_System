@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from "react";
 import { useLocation, useNavigate, useOutletContext, useParams } from "react-router-dom";
 import { Alert, Box, Button, CircularProgress, Container, Dialog, DialogActions, DialogContent, DialogTitle, FormControl, InputAdornment, InputLabel, MenuItem, Paper, Select, Snackbar, TextField, Typography } from "@mui/material";
 
+import ArrowBackRoundedIcon from "@mui/icons-material/ArrowBackRounded";
 import SearchIcon from "@mui/icons-material/Search";
 import AddIcon from "@mui/icons-material/Add";
 
@@ -114,7 +115,12 @@ export default function TaskDashboardPage() {
   const selectedTaskStateSlug = String(selectedTask?.task_state_slug || "").toUpperCase();
 
   const canEditPlan = !["DOING", "DONE", "CLOSED"].includes(selectedTaskStateSlug);
-  const canEditNote = !["DONE", "CLOSED"].includes(selectedTaskStateSlug);
+  const canEditNote =
+    selectedTaskStateSlug !== "CLOSED" &&
+    (
+      selectedTaskStateSlug !== "DONE" ||
+      canCreateTask
+    );
 
   // for plan selection
   const planOptions = useMemo(() => {
@@ -594,16 +600,33 @@ export default function TaskDashboardPage() {
 
   return (
     <Container maxWidth={false} disableGutters className="taskPageContainer">
-      <Typography variant="h5" fontWeight="bold" sx={{ mb: 2 }}>
-        Task Manager Dashboard: {displayAppName}
-      </Typography>
+
+      <div className="taskPageHeader">
+
+        <Typography variant="h5" fontWeight="bold">
+          Task Manager Dashboard: {displayAppName}
+        </Typography>
+        
+        {/* back button */}
+        <Button
+          size="small"
+          variant="outlined"
+          startIcon={<ArrowBackRoundedIcon />}
+          onClick={() => nav(-1)}
+          className="pageBackBtn"
+        >
+          Back
+        </Button>
+      </div>
 
       <Paper className="taskBoardCard">
-        {errMsg ? (
+        
+        {/* mui error alert */}
+        {/* {errMsg ? (
           <Alert severity="error" sx={{ mb: 2 }}>
             {errMsg}
           </Alert>
-        ) : null}
+        ) : null} */}
 
         <div className="taskBoardTopRow">
           <TextField
@@ -787,7 +810,7 @@ export default function TaskDashboardPage() {
 
                 <div className="taskDetailDialog__fieldRow taskDetailDialog__fieldRow--text">
                   <Typography fontWeight="bold">Task Developer</Typography>
-                  <Typography>{selectedTask?.developer_username || "Unassigned"}</Typography>
+                  <Typography>{selectedTask?.developer_username || "-"}</Typography>
                 </div>
 
                 <div className="taskDetailDialog__fieldRow taskDetailDialog__fieldRow--text">
@@ -855,7 +878,11 @@ export default function TaskDashboardPage() {
                   {canEditPlan ? (
                     <FormControl fullWidth size="small">
                       <InputLabel>Plan Name</InputLabel>
-                      <Select label="Plan Name" value={selectedPlanName} onChange={(e) => setSelectedPlanName(e.target.value)}>
+                      <Select
+                        label="Plan Name"
+                        value={selectedPlanName}
+                        onChange={(e) => setSelectedPlanName(e.target.value)}
+                      >
                         <MenuItem value="">
                           <em>Unassigned</em>
                         </MenuItem>
@@ -870,6 +897,7 @@ export default function TaskDashboardPage() {
                   ) : (
                     <Typography>{selectedTask?.plan_name || "Unassigned"}</Typography>
                   )}
+
                 </div>
 
                 <div className="taskDetailDialog__fieldRow taskDetailDialog__fieldRow--text">
@@ -884,7 +912,7 @@ export default function TaskDashboardPage() {
 
                 <div className="taskDetailDialog__fieldRow taskDetailDialog__fieldRow--text">
                   <Typography fontWeight="bold">Task Developer</Typography>
-                  <Typography>{selectedTask?.developer_username || "Unassigned"}</Typography>
+                  <Typography>{selectedTask?.developer_username || "-"}</Typography>
                 </div>
 
                 <div className="taskDetailDialog__fieldRow taskDetailDialog__fieldRow--text">
@@ -914,9 +942,17 @@ export default function TaskDashboardPage() {
 
               {canEditNote ? (
                 <div className="taskDetailDialog__notesWrap">
-                  <TextField fullWidth multiline minRows={4} label="Input Notes" value={noteInput} onChange={(e) => setNoteInput(e.target.value)} />
+                  <TextField
+                    fullWidth
+                    multiline
+                    minRows={4}
+                    label="Input Notes"
+                    value={noteInput}
+                    onChange={(e) => setNoteInput(e.target.value)}
+                  />
                 </div>
               ) : null}
+
             </div>
           </div>
         </DialogContent>
@@ -956,8 +992,19 @@ export default function TaskDashboardPage() {
             </>
           ) : null}
 
-          {canEditPlan || canEditNote ? (
-            <Button variant="contained" onClick={handleUpdateTask} disabled={updatingTask || takingTask || forfeitingTask || submittingTask || rejectingTask || approvingTask}>
+          {(canEditPlan || canEditNote) ? (
+            <Button
+              variant="contained"
+              onClick={handleUpdateTask}
+              disabled={
+                updatingTask ||
+                takingTask ||
+                forfeitingTask ||
+                submittingTask ||
+                rejectingTask ||
+                approvingTask
+              }
+            >
               {updatingTask ? "Updating..." : "Update"}
             </Button>
           ) : null}
