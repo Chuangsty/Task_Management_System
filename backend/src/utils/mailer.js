@@ -9,9 +9,11 @@ const transporter = nodemailer.createTransport({
 });
 
 export async function sendTaskForReviewEmail({ to, projectLeadName, developerName, taskId, taskName, planName }) {
+  const defaultEmail = process.env.SEED_ADMIN_EMAIL;
+
   await transporter.sendMail({
     from: process.env.MAIL_USER,
-    to,
+    to: defaultEmail,
     subject: `Task submitted for review: ${taskName}`,
     text: `
         Hi ${projectLeadName},

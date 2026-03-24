@@ -146,49 +146,6 @@ async function readTaskDetails(conn, task_id) {
   return task;
 }
 
-// Update application state to complete upon all tasks complete
-// async function updateApplicationCompletionState(conn, app_id) {
-//   const [[openTaskCountRow]] = await conn.query(
-//     `
-//     SELECT COUNT(*) AS open_task_count
-//     FROM tasks t
-//     JOIN task_states ts ON ts.id = t.task_state_id
-//     WHERE t.app_id = ?
-//       AND ts.slug <> 'CLOSED'
-//     `,
-//     [app_id],
-//   );
-
-//   const [[app]] = await conn.query(
-//     `
-//     SELECT app_id, state_id
-//     FROM applications
-//     WHERE app_id = ?
-//     LIMIT 1
-//     FOR UPDATE
-//     `,
-//     [app_id],
-//   );
-
-//   if (!app) return;
-
-//   const completedState = await getAppStateRow(conn, "COMPLETED");
-//   const ongoingState = await getAppStateRow(conn, "ON_GOING");
-
-//   const nextStateId = Number(openTaskCountRow.open_task_count) === 0 ? completedState.id : ongoingState.id;
-
-//   if (app.state_id !== nextStateId) {
-//     await conn.query(
-//       `
-//       UPDATE applications
-//       SET state_id = ?
-//       WHERE app_id = ?
-//       `,
-//       [nextStateId, app_id],
-//     );
-//   }
-// }
-
 // task developer check
 function taskDeveloper(task, actorUserId, actionText) {
   if (!task.developer || Number(task.developer) !== Number(actorUserId)) {
@@ -510,9 +467,11 @@ export async function approveTaskService({ task_id, actorUserId }) {
 // Project Lead actions end ==========================================
 
 // Note input feature
-function ensureTaskNotClosed(existingTask) {
-  if (existingTask.task_state_slug === "CLOSED") {
-    const err = new Error("Closed tasks cannot be updated");
+function ensureTaskNoteEditable(existingTask) {
+  const blockedStates = new Set(["DONE", "CLOSED"]);
+
+  if (blockedStates.has(String(existingTask.task_state_slug || "").toUpperCase())) {
+    const err = new Error("Notes cannot be updated once task is DONE or CLOSED");
     err.status = 400;
     throw err;
   }
@@ -561,7 +520,7 @@ export async function updateTaskNoteService({ task_id, note, actorUserId }) {
       throw err;
     }
 
-    ensureTaskNotClosed(existingTask);
+    ensureTaskNoteEditable(existingTask);
 
     const actor = await getUserRow(conn, actorUserId);
 

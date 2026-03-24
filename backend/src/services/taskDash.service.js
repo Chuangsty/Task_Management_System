@@ -71,10 +71,19 @@ function ensureAppNotCompleted(app) {
   }
 }
 
-// check for task completion
-function ensureTaskNotClosed(existingTask) {
-  if (existingTask.task_state_slug === "CLOSED") {
-    const err = new Error("Closed tasks cannot be updated");
+// // check for task completion
+// function ensureTaskNotClosed(existingTask) {
+//   if (existingTask.task_state_slug === "CLOSED") {
+//     const err = new Error("Closed tasks cannot be updated");
+//     err.status = 400;
+//     throw err;
+//   }
+// }
+function ensureTaskPlanEditable(existingTask) {
+  const blockedStates = new Set(["TODO", "DOING", "DONE", "CLOSED"]);
+
+  if (blockedStates.has(String(existingTask.task_state_slug || "").toUpperCase())) {
+    const err = new Error("Plan cannot be changed once task is DOING, DONE, or CLOSED");
     err.status = 400;
     throw err;
   }
@@ -425,8 +434,9 @@ export async function updateTaskService({ app_acronym, task_id, plan_name, actor
       throw err;
     }
 
-    // check for task completion
-    ensureTaskNotClosed(existingTask);
+    // // check for task completion
+    // ensureTaskNotClosed(existingTask);
+    ensureTaskPlanEditable(existingTask);
 
     // 2) build appended note
     // get actor username

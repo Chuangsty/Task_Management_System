@@ -111,9 +111,10 @@ export default function TaskDashboardPage() {
   // ability to submit task for review
   const canSubmitTask = Boolean(appInfo?.permit_Done) && roles.includes(appInfo.permit_Done);
 
-  const isAppCompleted = String(appInfo?.app_state_slug || "").toUpperCase() === "COMPLETED";
+  const selectedTaskStateSlug = String(selectedTask?.task_state_slug || "").toUpperCase();
 
-  const isTaskClosed = String(selectedTask?.task_state_slug || "").toUpperCase() === "CLOSED";
+  const canEditPlan = !["DOING", "DONE", "CLOSED"].includes(selectedTaskStateSlug);
+  const canEditNote = !["DONE", "CLOSED"].includes(selectedTaskStateSlug);
 
   // for plan selection
   const planOptions = useMemo(() => {
@@ -135,21 +136,12 @@ export default function TaskDashboardPage() {
 
   // Task Creation Helper Functions
   function handleOpenTaskDialog() {
-    if (isAppCompleted) {
-      setToast({
-        open: true,
-        severity: "error",
-        message: "Unable to create task in a completed application",
-      });
-      return;
-    } else {
-      setTaskForm({
-        task_name: "",
-        task_description: "",
-        plan_name: "",
-      });
-      setOpenTaskDialog(true);
-    }
+    setTaskForm({
+      task_name: "",
+      task_description: "",
+      plan_name: "",
+    });
+    setOpenTaskDialog(true);
   }
   function handleCloseTaskDialog() {
     if (creatingTask) return;
@@ -860,7 +852,7 @@ export default function TaskDashboardPage() {
                 <div className="taskDetailDialog__fieldRow taskDetailDialog__fieldRow--text">
                   <Typography fontWeight="bold">Plan Name</Typography>
 
-                  {!isTaskClosed ? (
+                  {canEditPlan ? (
                     <FormControl fullWidth size="small">
                       <InputLabel>Plan Name</InputLabel>
                       <Select label="Plan Name" value={selectedPlanName} onChange={(e) => setSelectedPlanName(e.target.value)}>
@@ -920,7 +912,7 @@ export default function TaskDashboardPage() {
                 </Paper>
               </div>
 
-              {!isTaskClosed ? (
+              {canEditNote ? (
                 <div className="taskDetailDialog__notesWrap">
                   <TextField fullWidth multiline minRows={4} label="Input Notes" value={noteInput} onChange={(e) => setNoteInput(e.target.value)} />
                 </div>
@@ -964,7 +956,7 @@ export default function TaskDashboardPage() {
             </>
           ) : null}
 
-          {!isTaskClosed ? (
+          {canEditPlan || canEditNote ? (
             <Button variant="contained" onClick={handleUpdateTask} disabled={updatingTask || takingTask || forfeitingTask || submittingTask || rejectingTask || approvingTask}>
               {updatingTask ? "Updating..." : "Update"}
             </Button>
