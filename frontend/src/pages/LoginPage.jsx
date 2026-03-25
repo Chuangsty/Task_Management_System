@@ -49,13 +49,12 @@ export default function LoginPage() {
         <div className="loginPage__cardWrap">
           <Card className="loginPage__card">
             <CardContent className="loginPage__cardContent">
-              
               {/* mui error alert */}
-              {/* {errMsg ? (
+              {errMsg ? (
                 <Alert severity="error" className="loginPage__alert">
                   {errMsg}
                 </Alert>
-              ) : null} */}
+              ) : null}
 
               <form onSubmit={onSubmit}>
                 <TextField

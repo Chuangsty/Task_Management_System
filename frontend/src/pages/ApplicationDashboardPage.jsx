@@ -56,12 +56,12 @@ export default function ApplicationsDashboardPage() {
   useEffect(() => {
     function handleTabBack() {
       if (document.visibilityState === "visible") {
-        loadTasks(); // or loadApps()
+        loadApps();
       }
     }
 
     function handleWindowFocus() {
-      loadTasks(); // or loadApps()
+      loadApps();
     }
 
     document.addEventListener("visibilitychange", handleTabBack);
@@ -217,11 +217,11 @@ export default function ApplicationsDashboardPage() {
 
       <Paper className="appsCard">
         {/* mui error alert */}
-        {/* {errMsg && (
+        {errMsg && (
           <Alert severity="error" sx={{ mb: 2 }}>
             {errMsg}
           </Alert>
-        )} */}
+        )}
 
         {/* Top row: Search (left) + New App (right) */}
         <div className="appsTopRow">

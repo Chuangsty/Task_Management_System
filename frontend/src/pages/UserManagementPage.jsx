@@ -36,7 +36,6 @@ export default function UserManagementPage() {
 
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [errMsg, setErrMsg] = useState("");
 
   const [q, setQ] = useState("");
   const [page, setPage] = useState(0);
@@ -64,7 +63,6 @@ export default function UserManagementPage() {
   const [toast, setToast] = useState({ open: false, severity: "success", msg: "" });
 
   async function loadUsers() {
-    setErrMsg("");
     setLoading(true);
     try {
       const res = await api.get("/api/admin");
@@ -73,7 +71,13 @@ export default function UserManagementPage() {
       const code = err?.response?.status;
       if (code === 401) nav("/login", { replace: true });
       else if (code === 403) nav("/applications", { replace: true });
-      else setErrMsg(err?.response?.data?.error || "Failed to load users");
+      else {
+        setToast({
+          open: true,
+          severity: "error",
+          message: err?.response?.data?.error || "Failed to load users",
+        });
+      }
     } finally {
       setLoading(false);
     }
@@ -100,7 +104,6 @@ export default function UserManagementPage() {
 
   // Add user function
   async function addUser() {
-
     try {
       await api.post("/api/admin/new_user", {
         username: newUser.username.trim(),
@@ -161,7 +164,6 @@ export default function UserManagementPage() {
       </Typography>
 
       <Paper className="usersCard">
-        
         {/* mui error alert */}
         {/* {errMsg && (
           <Alert severity="error" sx={{ mb: 2 }}>
@@ -208,41 +210,18 @@ export default function UserManagementPage() {
             <TableBody>
               {/* Onboarding row */}
               <TableRow className="usersOnboardRow ">
-                
                 <TableCell>
-                  <TextField
-                    fullWidth
-                    size="small"
-                    placeholder="Username"
-                    value={newUser.username}
-                    onChange={(e) => 
-                      setNewUser((p) => ({ ...p, username: e.target.value }))}
-                  />
+                  <TextField fullWidth size="small" placeholder="Username" value={newUser.username} onChange={(e) => setNewUser((p) => ({ ...p, username: e.target.value }))} />
                 </TableCell>
 
                 {/* Email input */}
                 <TableCell>
-                  <TextField
-                    fullWidth
-                    size="small"
-                    placeholder="Email"
-                    value={newUser.email}
-                    onChange={(e) => 
-                      setNewUser((p) => ({ ...p, email: e.target.value }))}
-                  />
+                  <TextField fullWidth size="small" placeholder="Email" value={newUser.email} onChange={(e) => setNewUser((p) => ({ ...p, email: e.target.value }))} />
                 </TableCell>
 
                 {/* Password input */}
                 <TableCell>
-                  <TextField
-                    fullWidth
-                    size="small"
-                    placeholder="Password"
-                    type="password"
-                    value={newUser.password}
-                    onChange={(e) =>
-                      setNewUser((p) => ({ ...p, password: e.target.value }))}
-                  />
+                  <TextField fullWidth size="small" placeholder="Password" type="password" value={newUser.password} onChange={(e) => setNewUser((p) => ({ ...p, password: e.target.value }))} />
                 </TableCell>
 
                 {/* DEFAULT status */}
@@ -257,8 +236,7 @@ export default function UserManagementPage() {
                     size="small"
                     multiple
                     value={newUser.roles} // array of slugs
-                    onChange={(e) => 
-                      setNewUser((p) => ({ ...p, roles: e.target.value }))}
+                    onChange={(e) => setNewUser((p) => ({ ...p, roles: e.target.value }))}
                     displayEmpty
                     renderValue={(selected) => (selected.length === 0 ? "Select role(s)" : selected.map((slug) => roleNameBySlug.get(slug) || slug).join(", "))}
                     className="usersSelect usersSelect--wide"

@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { useLocation, useNavigate, useOutletContext, useParams } from "react-router-dom";
 import { Alert, Box, Button, CircularProgress, Container, Dialog, DialogActions, DialogContent, DialogTitle, FormControl, InputAdornment, InputLabel, MenuItem, Paper, Select, Snackbar, TextField, Typography } from "@mui/material";
 
@@ -44,7 +44,6 @@ export default function TaskDashboardPage() {
   const [appInfo, setAppInfo] = useState(null);
   const [search, setSearch] = useState("");
   const [loading, setLoading] = useState(true);
-  const [errMsg, setErrMsg] = useState("");
 
   // Task creation dialog
   const [openTaskDialog, setOpenTaskDialog] = useState(false);
@@ -115,12 +114,7 @@ export default function TaskDashboardPage() {
   const selectedTaskStateSlug = String(selectedTask?.task_state_slug || "").toUpperCase();
 
   const canEditPlan = !["DOING", "DONE", "CLOSED"].includes(selectedTaskStateSlug);
-  const canEditNote =
-    selectedTaskStateSlug !== "CLOSED" &&
-    (
-      selectedTaskStateSlug !== "DONE" ||
-      canCreateTask
-    );
+  const canEditNote = selectedTaskStateSlug !== "CLOSED" && (selectedTaskStateSlug !== "DONE" || canCreateTask);
 
   // for plan selection
   const planOptions = useMemo(() => {
@@ -534,13 +528,12 @@ export default function TaskDashboardPage() {
     }
   }
 
-  async function loadPlans() {
+  const loadPlans = useCallback(async () => {
     const res = await api.get(`/api/apps/${appAcronym}/plans`);
     setPlans(Array.isArray(res.data?.plans) ? res.data.plans : []);
-  }
+  }, [appAcronym]);
 
-  async function loadTasks() {
-    setErrMsg("");
+  const loadTasks = useCallback(async () => {
     setLoading(true);
 
     try {
@@ -556,12 +549,16 @@ export default function TaskDashboardPage() {
       } else if (code === 403) {
         nav("/applications", { replace: true });
       } else {
-        setErrMsg(err?.response?.data?.error || "Failed to load tasks");
+        setToast({
+          open: true,
+          severity: "error",
+          message: err?.response?.data?.error || "Failed to load tasks",
+        });
       }
     } finally {
       setLoading(false);
     }
-  }
+  }, [appAcronym, nav]);
 
   const displayAppName = location.state?.appName || appInfo?.app_name || appAcronym || "Application";
 
@@ -570,15 +567,11 @@ export default function TaskDashboardPage() {
     loadTasks();
     loadPlans();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [appAcronym]);
+  }, [loadTasks, loadPlans]);
 
   useEffect(() => {
     const refresh = () => {
-      if (
-        document.visibilityState === "visible" &&
-        !openTaskDialog &&
-        !openTaskDetailDialog
-      ) {
+      if (document.visibilityState === "visible" && !openTaskDialog && !openTaskDetailDialog) {
         if (appAcronym) {
           loadTasks();
           loadPlans();
@@ -593,7 +586,7 @@ export default function TaskDashboardPage() {
       document.removeEventListener("visibilitychange", refresh);
       window.removeEventListener("focus", refresh);
     };
-  }, [appAcronym, openTaskDialog, openTaskDetailDialog]);
+  }, [appAcronym, openTaskDialog, openTaskDetailDialog, loadTasks, loadPlans]);
 
   const filteredTasks = useMemo(() => {
     const s = search.trim().toLowerCase();
@@ -623,34 +616,18 @@ export default function TaskDashboardPage() {
 
   return (
     <Container maxWidth={false} disableGutters className="taskPageContainer">
-
       <div className="taskPageHeader">
-
         <Typography variant="h5" fontWeight="bold">
           Task Manager Dashboard: {displayAppName}
         </Typography>
-        
+
         {/* back button */}
-        <Button
-          size="small"
-          variant="outlined"
-          startIcon={<ArrowBackRoundedIcon />}
-          onClick={() => nav(-1)}
-          className="pageBackBtn"
-        >
+        <Button size="small" variant="outlined" startIcon={<ArrowBackRoundedIcon />} onClick={() => nav(-1)} className="pageBackBtn">
           Back
         </Button>
       </div>
 
       <Paper className="taskBoardCard">
-        
-        {/* mui error alert */}
-        {/* {errMsg ? (
-          <Alert severity="error" sx={{ mb: 2 }}>
-            {errMsg}
-          </Alert>
-        ) : null} */}
-
         <div className="taskBoardTopRow">
           <TextField
             size="small"
@@ -901,11 +878,7 @@ export default function TaskDashboardPage() {
                   {canEditPlan ? (
                     <FormControl fullWidth size="small">
                       <InputLabel>Plan Name</InputLabel>
-                      <Select
-                        label="Plan Name"
-                        value={selectedPlanName}
-                        onChange={(e) => setSelectedPlanName(e.target.value)}
-                      >
+                      <Select label="Plan Name" value={selectedPlanName} onChange={(e) => setSelectedPlanName(e.target.value)}>
                         <MenuItem value="">
                           <em>Unassigned</em>
                         </MenuItem>
@@ -920,7 +893,6 @@ export default function TaskDashboardPage() {
                   ) : (
                     <Typography>{selectedTask?.plan_name || "Unassigned"}</Typography>
                   )}
-
                 </div>
 
                 <div className="taskDetailDialog__fieldRow taskDetailDialog__fieldRow--text">
@@ -965,17 +937,9 @@ export default function TaskDashboardPage() {
 
               {canEditNote ? (
                 <div className="taskDetailDialog__notesWrap">
-                  <TextField
-                    fullWidth
-                    multiline
-                    minRows={4}
-                    label="Input Notes"
-                    value={noteInput}
-                    onChange={(e) => setNoteInput(e.target.value)}
-                  />
+                  <TextField fullWidth multiline minRows={4} label="Input Notes" value={noteInput} onChange={(e) => setNoteInput(e.target.value)} />
                 </div>
               ) : null}
-
             </div>
           </div>
         </DialogContent>
@@ -1015,19 +979,8 @@ export default function TaskDashboardPage() {
             </>
           ) : null}
 
-          {(canEditPlan || canEditNote) ? (
-            <Button
-              variant="contained"
-              onClick={handleUpdateTask}
-              disabled={
-                updatingTask ||
-                takingTask ||
-                forfeitingTask ||
-                submittingTask ||
-                rejectingTask ||
-                approvingTask
-              }
-            >
+          {canEditPlan || canEditNote ? (
+            <Button variant="contained" onClick={handleUpdateTask} disabled={updatingTask || takingTask || forfeitingTask || submittingTask || rejectingTask || approvingTask}>
               {updatingTask ? "Updating..." : "Update"}
             </Button>
           ) : null}
