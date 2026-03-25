@@ -22,8 +22,10 @@ export function requireAppPermit(field) {
       );
 
       if (!app) {
-        const err = new Error("Application not found");
+        const err = new Error("Application does not exist");
         err.status = 404;
+        err.code = "APP_NOT_FOUND";
+        err.details = `Application with acronym "${appAcronym}" was not found.`;
         throw err;
       }
 

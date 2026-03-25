@@ -208,7 +208,7 @@ export default function TaskDashboardPage() {
       setToast({
         open: true,
         severity: "error",
-        message: err?.response?.data?.error || "Failed to save note",
+        message: err?.response?.data?.error?.message || "Failed to save note",
       });
     } finally {
       setUpdatingTask(false);
@@ -270,7 +270,7 @@ export default function TaskDashboardPage() {
     try {
       setCreatingTask(true);
 
-      await api.post(`/api/apps/${appAcronym}/tasks`, {
+      await api.post(`/api/apps/${appAcronym}/CreateTask`, {
         task_name: cleanTaskName,
         task_description: cleanTaskDescription,
         plan_name: cleanPlanName || null,
@@ -290,7 +290,7 @@ export default function TaskDashboardPage() {
       setToast({
         open: true,
         severity: "error",
-        message: err?.response?.data?.error || "Failed to create task",
+        message: err?.response?.data?.error?.message || "Failed to create task",
       });
     } finally {
       setCreatingTask(false);
@@ -347,7 +347,7 @@ export default function TaskDashboardPage() {
       setToast({
         open: true,
         severity: "error",
-        message: err?.response?.data?.error || "Failed to create plan",
+        message: err?.response?.data?.error?.message || "Failed to create plan",
       });
     } finally {
       setCreatingPlan(false);
@@ -386,7 +386,7 @@ export default function TaskDashboardPage() {
       setToast({
         open: true,
         severity: "error",
-        message: err?.response?.data?.error || "Failed to release task",
+        message: err?.response?.data?.error?.message || "Failed to release task",
       });
     } finally {
       setReleasingTask(false);
@@ -413,7 +413,7 @@ export default function TaskDashboardPage() {
       setToast({
         open: true,
         severity: "error",
-        message: err?.response?.data?.error || "Failed to take task",
+        message: err?.response?.data?.error?.message || "Failed to take task",
       });
     } finally {
       setTakingTask(false);
@@ -440,7 +440,7 @@ export default function TaskDashboardPage() {
       setToast({
         open: true,
         severity: "error",
-        message: err?.response?.data?.error || "Failed to forfeit task",
+        message: err?.response?.data?.error?.message || "Failed to forfeit task",
       });
     } finally {
       setForfeitingTask(false);
@@ -467,7 +467,7 @@ export default function TaskDashboardPage() {
       setToast({
         open: true,
         severity: "error",
-        message: err?.response?.data?.error || "Failed to submit task",
+        message: err?.response?.data?.error?.message || "Failed to submit task",
       });
     } finally {
       setSubmittingTask(false);
@@ -494,7 +494,7 @@ export default function TaskDashboardPage() {
       setToast({
         open: true,
         severity: "error",
-        message: err?.response?.data?.error || "Failed to reject task",
+        message: err?.response?.data?.error?.message || "Failed to reject task",
       });
     } finally {
       setRejectingTask(false);
@@ -521,7 +521,7 @@ export default function TaskDashboardPage() {
       setToast({
         open: true,
         severity: "error",
-        message: err?.response?.data?.error || "Failed to approve task",
+        message: err?.response?.data?.error?.message || "Failed to approve task",
       });
     } finally {
       setApprovingTask(false);
@@ -552,7 +552,7 @@ export default function TaskDashboardPage() {
         setToast({
           open: true,
           severity: "error",
-          message: err?.response?.data?.error || "Failed to load tasks",
+          message: err?.response?.data?.error?.message || "Failed to load tasks",
         });
       }
     } finally {

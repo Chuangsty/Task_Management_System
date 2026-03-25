@@ -33,7 +33,7 @@ export default function LoginPage() {
         nav("/applications");
       }
     } catch (err) {
-      setErrMsg(err?.response?.data?.error || "Login failed");
+      setErrMsg(err?.response?.data?.error?.message || "Login failed");
     } finally {
       setLoading(false);
     }

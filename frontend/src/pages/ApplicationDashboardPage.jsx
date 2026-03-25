@@ -127,7 +127,7 @@ export default function ApplicationsDashboardPage() {
       if (code === 401) {
         nav("/login", { replace: true });
       } else {
-        setErrMsg(err?.response?.data?.error || "Failed to load applications");
+        setErrMsg(err?.response?.data?.error?.message || "Failed to load applications");
       }
     } finally {
       setLoading(false);
@@ -186,7 +186,7 @@ export default function ApplicationsDashboardPage() {
       setToast({
         open: true,
         severity: "error",
-        msg: err?.response?.data?.error || (dialogMode === "create" ? "Create failed" : "Update failed"),
+        msg: err?.response?.data?.error?.message || (dialogMode === "create" ? "Create failed" : "Update failed"),
       });
     } finally {
       setSubmitting(false);

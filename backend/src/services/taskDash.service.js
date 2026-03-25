@@ -49,26 +49,19 @@ async function getAppByAcronymForUpdate(conn, cleanAcronym) {
     FROM applications a
     JOIN states s ON s.id = a.state_id
     WHERE app_acronym = ?
-    LIMIT 1
+    LIMIT 1         
     FOR UPDATE
     `,
     [cleanAcronym],
   );
   if (!app) {
-    const err = new Error("Application not found");
+    const err = new Error("Application does not exist");
     err.status = 404;
+    err.code = "APP_NOT_FOUND";
+    err.details = `Application with acronym "${cleanAcronym}" was not found.`;
     throw err;
   }
   return app;
-}
-
-// check for application completion
-function ensureAppNotCompleted(app) {
-  if (app.app_state_slug === "COMPLETED") {
-    const err = new Error("Unable to modify completed application");
-    err.status = 400;
-    throw err;
-  }
 }
 
 // check for task state for plan changes
@@ -189,6 +182,102 @@ export async function listTasksService(app_acronym) {
   };
 }
 
+export async function getTaskByStateService({ app_acronym, task_state }) {
+  const cleanAcronym = requireCleanAppAcronym(app_acronym);
+  const cleanTaskState = String(task_state ?? "")
+    .trim()
+    .toUpperCase();
+
+  if (!cleanTaskState) {
+    const err = new Error("Task state is required");
+    err.status = 400;
+    throw err;
+  }
+
+  const [[app]] = await pool.query(
+    `
+    SELECT
+      a.app_id,
+      a.app_name,
+      a.app_acronym,
+      a.permit_Open,
+      a.permit_toDo,
+      a.permit_Doing,
+      a.permit_Done,
+      s.slug AS app_state_slug
+    FROM applications a
+    JOIN states s ON s.id = a.state_id
+    WHERE a.app_acronym = ?
+    LIMIT 1
+    `,
+    [cleanAcronym],
+  );
+
+  if (!app) {
+    const err = new Error("Application not found");
+    err.status = 404;
+    throw err;
+  }
+
+  const [[taskState]] = await pool.query(
+    `
+    SELECT
+      id,
+      slug,
+      task_state_name
+    FROM task_states
+    WHERE UPPER(slug) = ?
+    LIMIT 1
+    `,
+    [cleanTaskState],
+  );
+
+  if (!taskState) {
+    const err = new Error("Invalid task state");
+    err.status = 400;
+    throw err;
+  }
+
+  const [tasks] = await pool.query(
+    `
+    SELECT
+      t.task_id,
+      t.task_no,
+      t.task_name,
+      t.task_description,
+      t.task_note,
+      t.plan_id,
+      p.plan_name,
+      t.task_created_at,
+      t.task_taken_at,
+      t.task_update_at,
+      ts.id AS task_state_id,
+      ts.slug AS task_state_slug,
+      ts.task_state_name AS task_state,
+      c.id AS creator_id,
+      c.username AS creator_username,
+      d.id AS developer_id,
+      d.username AS developer_username
+    FROM tasks t
+    JOIN applications a ON a.app_id = t.app_id
+    JOIN task_states ts ON ts.id = t.task_state_id
+    JOIN users c ON c.id = t.creator
+    LEFT JOIN users d ON d.id = t.developer
+    LEFT JOIN plans p ON p.plan_id = t.plan_id
+    WHERE a.app_acronym = ?
+      AND ts.slug = ?
+    ORDER BY t.task_no DESC
+    `,
+    [cleanAcronym, taskState.slug],
+  );
+
+  return {
+    app,
+    state: taskState,
+    tasks,
+  };
+}
+
 // get plan name from application for task plan assignment
 async function getPlanByNameForTask(conn, app_id, plan_name) {
   const cleanPlanName = String(plan_name ?? "").trim();
@@ -211,8 +300,10 @@ async function getPlanByNameForTask(conn, app_id, plan_name) {
   );
 
   if (!plan) {
-    const err = new Error(`Plan not found: ${cleanPlanName}`);
+    const err = new Error("Plan does not exist");
     err.status = 404;
+    err.code = "PLAN_NOT_FOUND";
+    err.details = `Plan "${cleanPlanName}" was not found in the application.`;
     throw err;
   }
 
@@ -225,11 +316,12 @@ export async function createTaskService({ app_acronym, task_name, task_descripti
 
   // validate task name
   if (!task_name || String(task_name).trim() === "") {
-    const err = new Error("Task name is required");
+    const err = new Error("Invalid input: task_name is required");
     err.status = 400;
+    err.code = "INVALID_TASK_NAME";
+    err.details = "The 'task_name' field must be a non-empty string.";
     throw err;
   }
-
   const cleanTaskName = String(task_name).trim();
   const cleanTaskDescription = task_description == null ? null : String(task_description).trim();
   const cleanPlanName = plan_name == null ? null : String(plan_name).trim();
@@ -241,21 +333,22 @@ export async function createTaskService({ app_acronym, task_name, task_descripti
 
     const app = await getAppByAcronymForUpdate(conn, cleanAcronym);
 
-    // 1) check for application completion state
-    ensureAppNotCompleted(app);
-
-    // check for application owndership
+    // 1) check for application owndership
     if (Number(app.project_lead) !== Number(actorUserId)) {
-      const err = new Error("You can only create task in applications that you created");
+      const err = new Error("Forbidden: insufficient permissions to create task in this application");
       err.status = 403;
+      err.code = "APP_FORBIDDEN_CREATE_TASK";
+      err.details = `User ${actorUserId} is not the project lead of application "${app.app_acronym}".`;
       throw err;
     }
 
     // 2) Check task name unique per app
     const [[t]] = await conn.query("SELECT task_name FROM tasks WHERE app_id = ? AND task_name = ? LIMIT 1", [app.app_id, cleanTaskName]);
     if (t) {
-      const err = new Error("Task name already exists in this application");
+      const err = new Error("Conflict: Task name already exists in this application");
       err.status = 409;
+      err.code = "TASK_NAME_CONFLICT";
+      err.details = `A task named "${cleanTaskName}" already exists under application ${app.app_acronym}.`;
       throw err;
     }
 
@@ -391,8 +484,6 @@ export async function updateTaskService({ app_acronym, task_id, plan_name, actor
     await conn.beginTransaction();
 
     const app = await getAppByAcronymForUpdate(conn, cleanAcronym);
-    // check for application completion state
-    ensureAppNotCompleted(app);
 
     // 1) ensure task exists
     const [[existingTask]] = await conn.query(
@@ -410,10 +501,11 @@ export async function updateTaskService({ app_acronym, task_id, plan_name, actor
       FROM tasks t
       JOIN task_states ts ON ts.id = t.task_state_id
       WHERE t.task_id = ?
+      AND t.app_id = ?
       LIMIT 1
       FOR UPDATE
       `,
-      [cleanTaskId],
+      [cleanTaskId, app.app_id],
     );
     // if no existing task
     if (!existingTask) {
@@ -547,9 +639,6 @@ export async function createPlanService({ app_acronym, plan_name, plan_startDate
 
     // 1) Lock application row
     const app = await getAppByAcronymForUpdate(conn, cleanAcronym);
-
-    // check for application completion state
-    ensureAppNotCompleted(app);
 
     const app_id = app.app_id;
 

@@ -1,10 +1,25 @@
-import { listTasksService, createTaskService, updateTaskService, createPlanService, listPlansService } from "../services/taskDash.service.js";
+import { listTasksService, getTaskByStateService, createTaskService, updateTaskService, createPlanService, listPlansService } from "../services/taskDash.service.js";
 
 // START of task controller ==========================================
 export async function listTasksController(req, res, next) {
   try {
     const app_acronym = req.params.appAcronym;
     const result = await listTasksService(app_acronym);
+
+    res.json(result);
+  } catch (err) {
+    next(err);
+  }
+}
+export async function getTaskbyStateController(req, res, next) {
+  try {
+    const app_acronym = req.params.appAcronym;
+    const task_state = req.params.taskState;
+
+    const result = await getTaskByStateService({
+      app_acronym,
+      task_state,
+    });
 
     res.json(result);
   } catch (err) {

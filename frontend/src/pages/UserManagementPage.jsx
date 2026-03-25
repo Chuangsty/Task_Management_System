@@ -75,7 +75,7 @@ export default function UserManagementPage() {
         setToast({
           open: true,
           severity: "error",
-          message: err?.response?.data?.error || "Failed to load users",
+          message: err?.response?.data?.error?.message || "Failed to load users",
         });
       }
     } finally {
@@ -115,7 +115,7 @@ export default function UserManagementPage() {
       setNewUser({ username: "", email: "", password: "", status: "ACTIVE", roles: [] });
       await loadUsers();
     } catch (err) {
-      setToast({ open: true, severity: "error", msg: err?.response?.data?.error || "Create failed" });
+      setToast({ open: true, severity: "error", msg: err?.response?.data?.error?.message || "Create failed" });
     }
   }
 
@@ -152,7 +152,7 @@ export default function UserManagementPage() {
       cancelEdit();
       await loadUsers();
     } catch (err) {
-      setToast({ open: true, severity: "error", msg: err?.response?.data?.error || "Update failed" });
+      setToast({ open: true, severity: "error", msg: err?.response?.data?.error?.message || "Update failed" });
     }
   }
 
