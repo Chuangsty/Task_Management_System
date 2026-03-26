@@ -9,8 +9,10 @@ export async function requireAuth(req, res, next) {
     const token = req.cookies?.[cookieName];
 
     if (!token) {
-      const err = new Error("Unauthorized");
+      const err = new Error("Authentication required");
       err.status = 401;
+      err.code = "UNAUTHORIZED";
+      err.details = "No valid authentication token provided.";
       throw err;
     }
 
@@ -22,12 +24,14 @@ export async function requireAuth(req, res, next) {
       if (err.name === "TokenExpiredError") {
         const e = new Error("Session expired"); // Setting a custom message instead of having a default message "jwt expired"
         e.status = 401;
+        e.code = "TOKEN_EXPIRED";
         throw e;
       }
 
       if (err.name === "JsonWebTokenError") {
         const e = new Error("Invalid token");
         e.status = 401;
+        e.code = "INVALID_TOKEN";
         throw e;
       }
 
@@ -53,6 +57,7 @@ export async function requireAuth(req, res, next) {
     if (rows.length === 0) {
       const err = new Error("Invalid token user");
       err.status = 401;
+      err.code = "INVALID_TOKEN_USER";
       throw err;
     }
     const user = rows[0];
@@ -61,6 +66,7 @@ export async function requireAuth(req, res, next) {
     if (user.status_slug !== "ACTIVE") {
       const err = new Error("Account is disabled");
       err.status = 403;
+      err.code = "ACCOUNT_DISABLED";
       throw err;
     }
 
@@ -83,7 +89,9 @@ export async function requireAuth(req, res, next) {
 
     next();
   } catch (err) {
-    err.status = err.status || 401;
+    err.code || null,
+    err.status = err.status || 401,
+    err.details || null;
     next(err);
   }
 }

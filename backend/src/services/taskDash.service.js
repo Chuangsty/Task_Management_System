@@ -189,8 +189,10 @@ export async function getTaskByStateService({ app_acronym, task_state }) {
     .toUpperCase();
 
   if (!cleanTaskState) {
-    const err = new Error("Task state is required");
+    const err = new Error("Invalid input: state is required");
     err.status = 400;
+    err.code = "TASK_STATE_REQUIRED";
+    err.details = "The 'state' parameter must be provided.";
     throw err;
   }
 
@@ -214,8 +216,10 @@ export async function getTaskByStateService({ app_acronym, task_state }) {
   );
 
   if (!app) {
-    const err = new Error("Application not found");
+    const err = new Error("Application does not exist");
     err.status = 404;
+    err.code = "APP_NOT_FOUND";
+    err.details = `Application with acronym "${cleanAcronym}" was not found.`;
     throw err;
   }
 
@@ -235,6 +239,8 @@ export async function getTaskByStateService({ app_acronym, task_state }) {
   if (!taskState) {
     const err = new Error("Invalid task state");
     err.status = 400;
+    err.code = "INVALID_TASK_STATE";
+    err.details = `Task state "${cleanTaskState}" does not exist.`;
     throw err;
   }
 

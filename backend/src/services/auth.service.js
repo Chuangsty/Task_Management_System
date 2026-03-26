@@ -50,6 +50,7 @@ export async function loginService({ email, password }) {
   if (rows.length === 0) {
     const err = new Error("Invalid credentials");
     err.status = 401;
+    err.code = "AUTH_FAILED";
     throw err;
   }
   // Extract user row
@@ -68,6 +69,7 @@ export async function loginService({ email, password }) {
   if (!ok) {
     const err = new Error("Invalid credentials");
     err.status = 401;
+    err.code = "AUTH_FAILED";
     throw err;
   }
 
