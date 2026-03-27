@@ -11,7 +11,7 @@ import workFlowRoutes from "./routes/workflow.routes.js";
 
 import rolesRoutes from "./routes/roles.routes.js";
 
-import { notFoundHandler, errorHandler } from "./middleware/error.middleware.js";
+import { errorHandler } from "./middleware/error.middleware.js";
 
 dotenv.config();
 
@@ -45,7 +45,6 @@ app.get("/api/health", (req, res) => {
 });
 
 // Error handling
-app.use(notFoundHandler);
 app.use(errorHandler);
 
 const port = process.env.PORT || 3000;

@@ -1,25 +1,13 @@
-// When route doesn't exist / matches the URL
-export function notFoundHandler(err, req, res, next) {
-  const status = err.status || 404;
-
-  res.status(status).json({
-    error: {
-      code: err.code || status,
-      message: err.message || "Route not found",
-      details: err.details || null,
-    },
-  });
-}
-
-// Central error handler
 export function errorHandler(err, req, res, next) {
+  console.error(err);
+
   const status = err.status || 500;
 
   res.status(status).json({
     error: {
-      code: err.code || status,
-      message: err.message || "Server error",
-      details: err.details || null,
+      code: err.code || (status === 400 ? "BAD_REQUEST" : status === 401 ? "UNAUTHORIZED" : status === 403 ? "FORBIDDEN" : status === 404 ? "NOT_FOUND" : "INTERNAL_SERVER_ERROR"),
+      message: err.message || (status === 400 ? "Bad request" : status === 401 ? "Unauthorized" : status === 403 ? "Forbidden" : status === 404 ? "Route not found" : "Server error"),
+      details: err.details ?? null,
     },
   });
 }

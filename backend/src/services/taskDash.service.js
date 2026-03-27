@@ -196,6 +196,8 @@ export async function getTaskByStateService({ app_acronym, task_state }) {
     throw err;
   }
 
+  console.log("no 0");
+
   const [[app]] = await pool.query(
     `
     SELECT
@@ -214,6 +216,8 @@ export async function getTaskByStateService({ app_acronym, task_state }) {
     `,
     [cleanAcronym],
   );
+
+  console.log("no 1");
 
   if (!app) {
     const err = new Error("Application does not exist");
@@ -543,7 +547,7 @@ export async function updateTaskService({ app_acronym, task_id, plan_name, actor
 
     // set note based on plan assigned or not
     let updateLine = "";
-    // if plan selected, task state -> to do
+    // if plan selected
     if (cleanPlanName) {
       const selectedPlan = await getPlanByNameForTask(conn, existingTask.app_id, cleanPlanName);
       nextPlanId = selectedPlan.plan_id;
