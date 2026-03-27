@@ -8,6 +8,8 @@ function requireTaskId(task_id) {
   if (cleanTaskId === "") {
     const err = new Error("Task id is required");
     err.status = 400;
+    err.code = "MISSING_TASK_ID";
+    err.details = `No task_id parameter was found in the request.`;
     throw err;
   }
   return cleanTaskId;
@@ -35,8 +37,10 @@ async function getTaskStateRow(conn, slug) {
     [slug],
   );
   if (!taskState) {
-    const err = new Error(`Task state ${slug} not found`);
-    err.status = 500;
+    const err = new Error("Task state not found");
+    err.status = 404;
+    err.code = "TASK_STATE_NOT_FOUND";
+    err.details = `Task state with slug "${slug}" does not exist.`;
     throw err;
   }
   return taskState;
@@ -54,8 +58,10 @@ async function getAppStateRow(conn, slug) {
     [slug],
   );
   if (!state) {
-    const err = new Error(`Application state ${slug} not found`);
-    err.status = 500;
+    const err = new Error("Application state not found");
+    err.status = 404;
+    err.code = "APPLICATION_STATE_NOT_FOUND";
+    err.details = `Application state with slug "${slug}" does not exist.`;
     throw err;
   }
   return state;
@@ -73,8 +79,10 @@ async function getUserRow(conn, userId) {
     [userId],
   );
   if (!user) {
-    const err = new Error(`User not found`);
-    err.status = 500;
+    const err = new Error("User not found");
+    err.status = 404;
+    err.code = "USER_NOT_FOUND";
+    err.details = `User with id "${userId}" does not exist.`;
     throw err;
   }
   return user;
@@ -104,6 +112,8 @@ async function getLockedTask(conn, task_id) {
   if (!task) {
     const err = new Error("Task not found");
     err.status = 404;
+    err.code = "TASK_NOT_FOUND";
+    err.details = `Task with id "${task_id}" does not exist.`;
     throw err;
   }
   return task;
@@ -151,6 +161,8 @@ function taskDeveloper(task, actorUserId, actionText) {
   if (!task.developer || Number(task.developer) !== Number(actorUserId)) {
     const err = new Error(`You can only ${actionText} your own task`);
     err.status = 403;
+    err.code = "TASK_DEV_OWNERSHIP_REQUIRED";
+    err.details = "Task taken on by a different user";
     throw err;
   }
 }
@@ -160,6 +172,8 @@ function taskCreator(task, actorUserId, actionText) {
   if (!task.creator || Number(task.creator) !== Number(actorUserId)) {
     const err = new Error(`You can only ${actionText} tasks that you've created`);
     err.status = 403;
+    err.code = "TASK_OWNERSHIP_REQUIRED";
+    err.details = "Task created by a different user";
     throw err;
   }
 }
@@ -211,8 +225,10 @@ async function getProjectLeadNotificationInfo(task_id) {
     [task_id],
   );
   if (!row) {
-    const err = new Error("Project lead notification info not found");
-    err.status = 500;
+    const err = new Error("User's email info not found");
+    err.status = 404;
+    err.code = `USER'S_EMAIL_NOT_FOUND`;
+    err.details = "Email for task submission not found.";
     throw err;
   }
   return row;
@@ -245,7 +261,9 @@ async function runTaskTransition({
     // state check
     if (task.task_state_slug !== allowedCurrentState) {
       const err = new Error(wrongStateMessage);
-      err.status = 400;
+      err.status = 409;
+      err.code = "TASK_INVALID_STATE_TRANSITION";
+      err.details = `Current task state is not ${allowedCurrentState}.`;
       throw err;
     }
 
@@ -313,20 +331,24 @@ export async function takeTaskService({ task_id, actorUserId }) {
     actorUserId,
     targetStateSlug: "DOING",
     allowedCurrentState: "TODO",
-    wrongStateMessage: "Only TODO tasks can be taken",
+    wrongStateMessage: "Only tasks in TODO state can be taken",
 
     validateTask: async ({ task }) => {
       // task developer check
       if (task.developer) {
-        const err = new Error("Task is already taken by a developer");
+        const err = new Error("Task is not available to be taken");
         err.status = 409;
+        err.code = "UNABLE_TO_TAKE_TASK";
+        err.details = `Task is already taken.`;
         throw err;
       }
 
       // task plan check
       if (!task.plan_id) {
         const err = new Error("Only planned tasks can be taken");
-        err.status = 400;
+        err.status = 409;
+        err.code = "TASK_NOT_PLANNED";
+        err.details = "Task must be assigned to a plan before it can be taken.";
         throw err;
       }
     },
@@ -351,7 +373,7 @@ export async function forfeitTaskService({ task_id, actorUserId }) {
     actorUserId,
     targetStateSlug: "TODO",
     allowedCurrentState: "DOING",
-    wrongStateMessage: "Only DOING tasks can be forfeited",
+    wrongStateMessage: "Only tasks in DOING state can be forfeited",
 
     validateTask: async ({ task, actorUserId }) => {
       // task developer ownership validation
@@ -372,13 +394,13 @@ export async function forfeitTaskService({ task_id, actorUserId }) {
 }
 
 // Submit task
-export async function submitTaskService({ task_id, actorUserId }) {
+export async function promoteTask2DoneService({ task_id, actorUserId }) {
   return runTaskTransition({
     task_id,
     actorUserId,
     targetStateSlug: "DONE",
     allowedCurrentState: "DOING",
-    wrongStateMessage: "Only DOING tasks can be submitted",
+    wrongStateMessage: "Only tasks in DOING state can be submitted",
 
     validateTask: async ({ task, actorUserId }) => {
       // task developer ownership validation
@@ -422,7 +444,7 @@ export async function rejectTaskService({ task_id, actorUserId }) {
     actorUserId,
     targetStateSlug: "DOING",
     allowedCurrentState: "DONE",
-    wrongStateMessage: "Only DONE tasks can be rejected",
+    wrongStateMessage: "Only tasks in DONE state can be rejected",
 
     validateTask: async ({ task, actorUserId }) => {
       // task developer ownership validation
@@ -447,7 +469,7 @@ export async function approveTaskService({ task_id, actorUserId }) {
     actorUserId,
     targetStateSlug: "CLOSED",
     allowedCurrentState: "DONE",
-    wrongStateMessage: "Only DONE tasks can be approved",
+    wrongStateMessage: "Only tasks in DONE state can be approved",
 
     validateTask: async ({ task, actorUserId }) => {
       // task developer ownership validation
@@ -472,17 +494,20 @@ function ensureTaskNoteEditable(existingTask, actorRoles = [], permitOpenRole = 
 
   if (taskStateSlug === "CLOSED") {
     const err = new Error("Notes cannot be updated once task is CLOSED");
-    err.status = 400;
+    err.status = 403;
+    err.code = "TASK_CLOSED";
+    err.details = "Note cannot be updated for tasks in CLOSED state.";
     throw err;
   }
 
   if (taskStateSlug === "DONE") {
-    const canEditDoneNote =
-      permitOpenRole && actorRoles.includes(String(permitOpenRole).trim());
+    const canEditDoneNote = permitOpenRole && actorRoles.includes(String(permitOpenRole).trim());
 
     if (!canEditDoneNote) {
-      const err = new Error("Only the permit_Open role can update notes when task is DONE");
+      const err = new Error("Only users with the permit_Open role can update notes when the task is DONE");
       err.status = 403;
+      err.code = "DONE_TASK_NOTE_UPDATE_FORBIDDEN";
+      err.details = "Notes for DONE tasks can only be updated by users in the permit_Open role.";
       throw err;
     }
   }
@@ -492,6 +517,8 @@ export async function updateTaskNoteService({ task_id, note, actorUserId }) {
   if (!task_id || String(task_id).trim() === "") {
     const err = new Error("Task id is required");
     err.status = 400;
+    err.code = "MISSING_TASK";
+    err.details = "Task missing for update.";
     throw err;
   }
 
@@ -501,6 +528,8 @@ export async function updateTaskNoteService({ task_id, note, actorUserId }) {
   if (!cleanNote) {
     const err = new Error("Note is required");
     err.status = 400;
+    err.code = "MISSING_UPDATE_NOTE_INPUT";
+    err.details = "Note input missing for update.";
     throw err;
   }
 
@@ -530,6 +559,8 @@ export async function updateTaskNoteService({ task_id, note, actorUserId }) {
     if (!existingTask) {
       const err = new Error("Task not found");
       err.status = 404;
+      err.code = "TASK_NOT_FOUND";
+      err.details = "Task is missing from application.";
       throw err;
     }
 
@@ -616,6 +647,8 @@ export async function releaseTaskService({ task_id, actorUserId }) {
   if (!task_id || String(task_id).trim() === "") {
     const err = new Error("Task id is required");
     err.status = 400;
+    err.code = "TASK_ID_REQUIRED";
+    err.details = "Task id is missing.";
     throw err;
   }
 
@@ -648,18 +681,24 @@ export async function releaseTaskService({ task_id, actorUserId }) {
     if (!existingTask) {
       const err = new Error("Task not found");
       err.status = 404;
+      err.code = "TASK_NOT_FOUND";
+      err.details = "Task is missing from application.";
       throw err;
     }
 
     if (!existingTask.plan_id) {
       const err = new Error("Task must be assigned to a plan before release");
       err.status = 400;
+      err.code = "UNASSIGNED_TASK";
+      err.details = "Unassigned task cannot be release.";
       throw err;
     }
 
     if (existingTask.task_state_slug !== "OPEN") {
       const err = new Error("Only OPEN tasks can be released");
       err.status = 400;
+      err.code = "UNOPEN_TASK_CANNOT_BE_RELEASE";
+      err.details = "Only tasks that are in the OPEN state can be released.";
       throw err;
     }
 
@@ -682,6 +721,8 @@ export async function releaseTaskService({ task_id, actorUserId }) {
     if (!app) {
       const err = new Error("Application not found");
       err.status = 404;
+      err.code = "APPLICATION_NOT_FOUND";
+      err.details = "Application is missing.";
       throw err;
     }
 

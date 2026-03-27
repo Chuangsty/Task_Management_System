@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { requireAuth } from "../middleware/auth.middleware.js";
-import { takeTaskController, forfeitTaskController, submitTaskController, rejectTaskController, approveTaskController, updateTaskNoteController, releaseTaskController } from "../controllers/workflow.controller.js";
+import { takeTaskController, forfeitTaskController, promoteTask2DoneController, rejectTaskController, approveTaskController, updateTaskNoteController, releaseTaskController } from "../controllers/workflow.controller.js";
 import { requireTaskPermit } from "../middleware/permit.middleware.js";
 
 const router = Router();
@@ -10,8 +10,8 @@ const router = Router();
 router.post("/tasks/:taskId/take", requireAuth, requireTaskPermit("permit_Doing"), takeTaskController);
 // POST api/tasks/:taskId/forfeit
 router.post("/tasks/:taskId/forfeit", requireAuth, forfeitTaskController);
-// POST api/tasks/:taskId/submit
-router.post("/tasks/:taskId/submit", requireAuth, requireTaskPermit("permit_Done"), submitTaskController);
+// POST api/tasks/:taskId/PromoteTask2Done
+router.post("/tasks/:taskId/PromoteTask2Done", requireAuth, requireTaskPermit("permit_Done"), promoteTask2DoneController);
 
 // Project Lead workflow
 // POST api/tasks/:taskId/reject

@@ -1,4 +1,4 @@
-import { takeTaskService, forfeitTaskService, submitTaskService, rejectTaskService, approveTaskService, updateTaskNoteService, releaseTaskService } from "../services/workflow.service.js";
+import { takeTaskService, forfeitTaskService, promoteTask2DoneService, rejectTaskService, approveTaskService, updateTaskNoteService, releaseTaskService } from "../services/workflow.service.js";
 
 export async function takeTaskController(req, res, next) {
   try {
@@ -22,12 +22,15 @@ export async function forfeitTaskController(req, res, next) {
   }
 }
 
-export async function submitTaskController(req, res, next) {
+export async function promoteTask2DoneController(req, res, next) {
+  console.log("running 1");
   try {
     const task_id = req.params.taskId;
-    const tasks = await submitTaskService({ task_id, actorUserId: req.user.id });
+    const tasks = await promoteTask2DoneService({ task_id, actorUserId: req.user.id });
+    console.log("running 2");
 
     res.json(tasks);
+    console.log("running 3");
   } catch (err) {
     next(err);
   }

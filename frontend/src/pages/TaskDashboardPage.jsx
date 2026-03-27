@@ -454,7 +454,7 @@ export default function TaskDashboardPage() {
     try {
       setSubmittingTask(true);
 
-      await api.post(`/api/tasks/${selectedTask.task_id}/submit`);
+      await api.post(`/api/tasks/${selectedTask.task_id}/PromoteTask2Done`);
       await refreshTaskInDialog(selectedTask.task_id);
       handleCloseTaskDetail(true);
 
