@@ -41,26 +41,30 @@ export async function listAppsService() {
 
 export async function createAppsService({ app_name, app_startDate, app_endDate, app_description, actorUserId, permit_Open, permit_toDo, permit_Doing, permit_Done }) {
   // validate app name
-  if (!app_name || String(app_name).trim() === "") {
-    const err = new Error("Application name is required");
-    err.status = 400;
-    throw err;
-  }
+  if (!app_name || String(app_name).trim() === "") throw appError(400, "BAD_REQUEST");
+  // if (!app_name || String(app_name).trim() === "") {
+  //   const err = new Error("Application name is required");
+  //   err.status = 400;
+  //   throw err;
+  // }
 
   // validate app dates
-  if (!app_startDate || !app_endDate) {
-    const err = new Error("Start and end dates are required");
-    err.status = 400;
-    throw err;
-  }
+  if (!app_startDate || !app_endDate) throw appError(400, "APP_DATE_RANGE_INVALID");
+  // if (!app_startDate || !app_endDate) {
+  //   const err = new Error("Start and end dates are required");
+  //   err.status = 400;
+  //   throw err;
+  // }
+
   // get today's date in YYYY-MM-DD
   const today = new Date().toISOString().split("T")[0];
   // end date cannot be before start date
-  if (app_startDate && app_endDate && app_startDate > app_endDate) {
-    const err = new Error("End date must be later than start date");
-    err.status = 400;
-    throw err;
-  }
+  if (app_startDate > app_endDate) throw appError(400, "APP_DATE_RANGE_INVALID");
+  // if (app_startDate && app_endDate && app_startDate > app_endDate) {
+  //   const err = new Error("End date must be later than start date");
+  //   err.status = 400;
+  //   throw err;
+  // }
 
   // normalize permits
   const cleanPermitOpen = String(permit_Open).trim();
@@ -68,11 +72,13 @@ export async function createAppsService({ app_name, app_startDate, app_endDate, 
   const cleanPermitDoing = String(permit_Doing).trim();
   const cleanPermitDone = String(permit_Done).trim();
   // validate permits
-  if (!cleanPermitOpen || !cleanPermitToDo || !cleanPermitDoing || !cleanPermitDone) {
-    const err = new Error("Permits are required");
-    err.status = 400;
-    throw err;
-  }
+  if (!cleanPermitOpen || !cleanPermitToDo || !cleanPermitDoing || !cleanPermitDone) throw appError(400, "BAD_REQUEST");
+  // if (!cleanPermitOpen || !cleanPermitToDo || !cleanPermitDoing || !cleanPermitDone) {
+  //   const err = new Error("Permits are required");
+  //   err.status = 400;
+  //   throw err;
+  // }
+
   const permitRoles = [cleanPermitOpen, cleanPermitToDo, cleanPermitDoing, cleanPermitDone];
 
   // normalize application name and description
@@ -95,19 +101,21 @@ export async function createAppsService({ app_name, app_startDate, app_endDate, 
 
     const [[stateRow]] = await conn.query(`SELECT id FROM states WHERE slug = 'ON_GOING' limit 1`);
 
-    if (!stateRow) {
-      const err = new Error("Default application state not found");
-      err.status = 500;
-      throw err;
-    }
+    if (!stateRow) throw appError(500, "DEFAULT_APP_STATE_MISSING");
+    // if (!stateRow) {
+    //   const err = new Error("Default application state not found");
+    //   err.status = 500;
+    //   throw err;
+    // }
 
     // Check application name unique
     const [[a]] = await conn.query("SELECT app_name FROM applications WHERE app_name = ? LIMIT 1", [cleanName]);
-    if (a) {
-      const err = new Error("Application name already exists");
-      err.status = 409;
-      throw err;
-    }
+    if (a) throw appError(409, "APP_NAME_CONFLICT");
+    // if (a) {
+    //   const err = new Error("Application name already exists");
+    //   err.status = 409;
+    //   throw err;
+    // }
 
     // Start of application acronym generation ======================================
     /* 
@@ -141,11 +149,12 @@ export async function createAppsService({ app_name, app_startDate, app_endDate, 
     const validRoleSlugs = new Set(dbRoles.map((r) => r.slug));
     // find which submitted permits are invalid
     const invalidPermits = permitRoles.filter((role) => !validRoleSlugs.has(role));
-    if (invalidPermits.length > 0) {
-      const err = new Error(`Invalid permit role(s): ${invalidPermits.join(", ")}`);
-      err.status = 400;
-      throw err;
-    }
+    if (invalidPermits.length > 0) throw appError(400, "INVALID_ROLE");
+    // if (invalidPermits.length > 0) {
+    //   const err = new Error(`Invalid permit role(s): ${invalidPermits.join(", ")}`);
+    //   err.status = 400;
+    //   throw err;
+    // }
 
     const [result] = await conn.query(
       `
@@ -200,11 +209,12 @@ export async function updateAppsService({ app_acronym, app_id, app_startDate, ap
     .trim()
     .toUpperCase();
   // validate acronym
-  if (cleanAcronym === "") {
-    const err = new Error("App acronym is required");
-    err.status = 400;
-    throw err;
-  }
+  if (cleanAcronym === "") throw appError(400, "APP_ACRONYM_REQUIRED");
+  // if (cleanAcronym === "") {
+  //   const err = new Error("App acronym is required");
+  //   err.status = 400;
+  //   throw err;
+  // }
 
   const conn = await pool.getConnection();
   try {
@@ -218,17 +228,19 @@ export async function updateAppsService({ app_acronym, app_id, app_startDate, ap
       [cleanAcronym],
     );
 
-    if (!app) {
-      const err = new Error("Application not found");
-      err.status = 404;
-      throw err;
-    }
+    if (!app) throw appError(404, "APP_NOT_FOUND");
+    // if (!app) {
+    //   const err = new Error("Application not found");
+    //   err.status = 404;
+    //   throw err;
+    // }
 
-    if (Number(app.project_lead) !== Number(actorUserId)) {
-      const err = new Error("You can only update applications that you created");
-      err.status = 403;
-      throw err;
-    }
+    if (Number(app.project_lead) !== Number(actorUserId)) throw appError(403, "FORBIDDEN");
+    // if (Number(app.project_lead) !== Number(actorUserId)) {
+    //   const err = new Error("You can only update applications that you created");
+    //   err.status = 403;
+    //   throw err;
+    // }
 
     const updates = [];
     const values = [];
@@ -243,11 +255,12 @@ export async function updateAppsService({ app_acronym, app_id, app_startDate, ap
       values.push(app_endDate);
     }
 
-    if (app_startDate && app_endDate && app_startDate > app_endDate) {
-      const err = new Error("Application end date must be later than start date");
-      err.status = 400;
-      throw err;
-    }
+    if (app_startDate && app_endDate && app_startDate > app_endDate) throw appError(400, "APP_DATE_RANGE_INVALID");
+    // if (app_startDate && app_endDate && app_startDate > app_endDate) {
+    //   const err = new Error("Application end date must be later than start date");
+    //   err.status = 400;
+    //   throw err;
+    // }
 
     if (app_description !== undefined) {
       const cleanDescription = app_description == null ? null : String(app_description).trim();
@@ -276,11 +289,12 @@ export async function updateAppsService({ app_acronym, app_id, app_startDate, ap
 
     // CAN IMPLEMENT CONTRAINTS TO INCLUDE PLANS START END DATE TO CONTAIN AND NOT BE CONTAINED.
 
-    if (updates.length === 0) {
-      const err = new Error("No fields provided to update");
-      err.status = 400;
-      throw err;
-    }
+    if (updates.length === 0) throw appError(400, "NO_UPDATE_FIELDS");
+    // if (updates.length === 0) {
+    //   const err = new Error("No fields provided to update");
+    //   err.status = 400;
+    //   throw err;
+    // }
 
     values.push(app.app_id);
 

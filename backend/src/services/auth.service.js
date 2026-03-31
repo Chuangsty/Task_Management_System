@@ -15,18 +15,20 @@ import { pool } from "../config/db.js";
 // Login auth with email and password
 export async function loginService({ email, password }) {
   // If no input
-  if (!email || !password) {
-    const err = new Error("Email and password are required");
-    err.status = 400;
-    throw err;
-  }
+  if (!email || !password) throw appError(400, "BAD_REQUEST");
+  // if (!email || !password) {
+  //   const err = new Error("Email and password are required");
+  //   err.status = 400;
+  //   throw err;
+  // }
 
   // If no valid email input
-  if (!/^\S+@\S+\.\S+$/.test(email)) {
-    const err = new Error("Email format is invalid");
-    err.status = 400;
-    throw err;
-  }
+  if (!/^\S+@\S+\.\S+$/.test(email)) throw appError(400, "INVALID_EMAIL");
+  // if (!/^\S+@\S+\.\S+$/.test(email)) {
+  //   const err = new Error("Email format is invalid");
+  //   err.status = 400;
+  //   throw err;
+  // }
 
   /*
   Query the database for user with matching email
@@ -47,31 +49,35 @@ export async function loginService({ email, password }) {
   );
 
   // If no user is found
-  if (rows.length === 0) {
-    const err = new Error("Invalid credentials");
-    err.status = 401;
-    err.code = "AUTH_FAILED";
-    throw err;
-  }
+  if (rows.length === 0) throw appError(401, "AUTH_FAILED");
+  // if (rows.length === 0) {
+  //   const err = new Error("Invalid credentials");
+  //   err.status = 401;
+  //   err.code = "AUTH_FAILED";
+  //   throw err;
+  // }
+
   // Extract user row
   const user = rows[0];
 
   //   If user account is not "ACTIVE"
-  if (user.status_slug !== "ACTIVE") {
-    const err = new Error("Account is disabled");
-    err.status = 403;
-    throw err;
-  }
+  if (user.status_slug !== "ACTIVE") throw appError(403, "ACCOUNT_DISABLED");
+  // if (user.status_slug !== "ACTIVE") {
+  //   const err = new Error("Account is disabled");
+  //   err.status = 403;
+  //   throw err;
+  // }
 
   //   Compare provided password with hased password in DB
   const ok = await bcrypt.compare(password, user.password_hash);
   //   If password doesn't match
-  if (!ok) {
-    const err = new Error("Invalid credentials");
-    err.status = 401;
-    err.code = "AUTH_FAILED";
-    throw err;
-  }
+  if (!ok) throw appError(401, "AUTH_FAILED");
+  // if (!ok) {
+  //   const err = new Error("Invalid credentials");
+  //   err.status = 401;
+  //   err.code = "AUTH_FAILED";
+  //   throw err;
+  // }
 
   // Load user role(s) from user_roles table
   const [roleRows] = await pool.query(
@@ -125,11 +131,12 @@ export async function getUserMeService(id) {
     [id],
   );
 
-  if (rows.length === 0) {
-    const err = new Error("User not found");
-    err.status = 404;
-    throw err;
-  }
+  if (rows.length === 0) throw appError(404, "USER_NOT_FOUND");
+  // if (rows.length === 0) {
+  //   const err = new Error("User not found");
+  //   err.status = 404;
+  //   throw err;
+  // }
 
   const row = rows[0];
   return {

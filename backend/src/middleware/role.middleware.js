@@ -1,3 +1,5 @@
+import { appError } from "../utils/appError.js";
+
 // Usage: for example requireRole("ADMIN")
 export function requireRole(roleSlug) {
   return (req, res, next) => {
@@ -7,10 +9,14 @@ export function requireRole(roleSlug) {
 
     //  If required role doesn't match user's role array
     if (!roles.includes(roleSlug)) {
-      const err = new Error("Forbidden");
-      err.status = 403;
-      return next(err);
+      return next(appError(403, "FORBIDDEN"));
     }
+    // if (!roles.includes(roleSlug)) {
+    //   const err = new Error("Forbidden");
+    //   err.status = 403;
+    //   return next(err);
+    // }
+
     next();
   };
 }

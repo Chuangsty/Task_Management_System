@@ -39,7 +39,8 @@ export async function createTaskController(req, res, next) {
       actorUserId: req.user.id,
     });
 
-    res.status(201).json(result);
+    // res.status(201).json(result);
+    res.json(result);
   } catch (err) {
     next(err);
   }

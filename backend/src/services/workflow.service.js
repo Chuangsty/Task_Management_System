@@ -1,17 +1,20 @@
 import { pool } from "../config/db.js";
+import { appError } from "../utils/appError.js";
 import { sendTaskForReviewEmail } from "../utils/mailer.js";
 
 // START helper functions ==============================
 // validate cleaned string value of required task id
 function requireTaskId(task_id) {
   const cleanTaskId = String(task_id ?? "").trim();
-  if (cleanTaskId === "") {
-    const err = new Error("Task id is required");
-    err.status = 400;
-    err.code = "MISSING_TASK_ID";
-    err.details = `No task_id parameter was found in the request.`;
-    throw err;
-  }
+  if (cleanTaskId === "") throw appError(400, "MISSING_TASK_ID");
+  // if (cleanTaskId === "") {
+  //   const err = new Error("Task id is required");
+  //   err.status = 400;
+  //   err.code = "MISSING_TASK_ID";
+  //   err.details = `No task_id parameter was found in the request.`;
+  //   throw err;
+  // }
+
   return cleanTaskId;
 }
 
@@ -36,13 +39,15 @@ async function getTaskStateRow(conn, slug) {
         `,
     [slug],
   );
-  if (!taskState) {
-    const err = new Error("Task state not found");
-    err.status = 404;
-    err.code = "TASK_STATE_NOT_FOUND";
-    err.details = `Task state with slug "${slug}" does not exist.`;
-    throw err;
-  }
+  if (!taskState) throw appError(404, "TASK_STATE_NOT_FOUND");
+  // if (!taskState) {
+  //   const err = new Error("Task state not found");
+  //   err.status = 404;
+  //   err.code = "TASK_STATE_NOT_FOUND";
+  //   err.details = `Task state with slug "${slug}" does not exist.`;
+  //   throw err;
+  // }
+
   return taskState;
 }
 
@@ -57,13 +62,15 @@ async function getAppStateRow(conn, slug) {
         `,
     [slug],
   );
-  if (!state) {
-    const err = new Error("Application state not found");
-    err.status = 404;
-    err.code = "APPLICATION_STATE_NOT_FOUND";
-    err.details = `Application state with slug "${slug}" does not exist.`;
-    throw err;
-  }
+  if (!state) throw appError(404, "APPLICATION_STATE_NOT_FOUND");
+  // if (!state) {
+  //   const err = new Error("Application state not found");
+  //   err.status = 404;
+  //   err.code = "APPLICATION_STATE_NOT_FOUND";
+  //   err.details = `Application state with slug "${slug}" does not exist.`;
+  //   throw err;
+  // }
+
   return state;
 }
 
@@ -78,13 +85,15 @@ async function getUserRow(conn, userId) {
         `,
     [userId],
   );
-  if (!user) {
-    const err = new Error("User not found");
-    err.status = 404;
-    err.code = "USER_NOT_FOUND";
-    err.details = `User with id "${userId}" does not exist.`;
-    throw err;
-  }
+  if (!user) throw appError(404, "USER_NOT_FOUND");
+  // if (!user) {
+  //   const err = new Error("User not found");
+  //   err.status = 404;
+  //   err.code = "USER_NOT_FOUND";
+  //   err.details = `User with id "${userId}" does not exist.`;
+  //   throw err;
+  // }
+
   return user;
 }
 
@@ -109,13 +118,15 @@ async function getLockedTask(conn, task_id) {
         `,
     [task_id],
   );
-  if (!task) {
-    const err = new Error("Task not found");
-    err.status = 404;
-    err.code = "TASK_NOT_FOUND";
-    err.details = `Task with id "${task_id}" does not exist.`;
-    throw err;
-  }
+  if (!task) throw appError(404, "TASK_NOT_FOUND");
+  // if (!task) {
+  //   const err = new Error("Task not found");
+  //   err.status = 404;
+  //   err.code = "TASK_NOT_FOUND";
+  //   err.details = `Task with id "${task_id}" does not exist.`;
+  //   throw err;
+  // }
+
   return task;
 }
 
@@ -158,24 +169,12 @@ async function readTaskDetails(conn, task_id) {
 
 // task developer check
 function taskDeveloper(task, actorUserId, actionText) {
-  if (!task.developer || Number(task.developer) !== Number(actorUserId)) {
-    const err = new Error(`You can only ${actionText} your own task`);
-    err.status = 403;
-    err.code = "TASK_DEV_OWNERSHIP_REQUIRED";
-    err.details = "Task taken on by a different user";
-    throw err;
-  }
+  if (!task.developer || Number(task.developer) !== Number(actorUserId)) throw appError(403, "TASK_DEV_OWNERSHIP_REQUIRED");
 }
 
 // task creator check
 function taskCreator(task, actorUserId, actionText) {
-  if (!task.creator || Number(task.creator) !== Number(actorUserId)) {
-    const err = new Error(`You can only ${actionText} tasks that you've created`);
-    err.status = 403;
-    err.code = "TASK_OWNERSHIP_REQUIRED";
-    err.details = "Task created by a different user";
-    throw err;
-  }
+  if (!task.creator || Number(task.creator) !== Number(actorUserId)) throw appError(403, "TASK_OWNERSHIP_REQUIRED");
 }
 
 // task update helper
@@ -224,13 +223,14 @@ async function getProjectLeadNotificationInfo(task_id) {
     `,
     [task_id],
   );
-  if (!row) {
-    const err = new Error("User's email info not found");
-    err.status = 404;
-    err.code = `USER'S_EMAIL_NOT_FOUND`;
-    err.details = "Email for task submission not found.";
-    throw err;
-  }
+  if (!row) throw appError(404, "EMAIL_NOT_FOUND");
+  // if (!row) {
+  //   const err = new Error("User's email info not found");
+  //   err.status = 404;
+  //   err.code = `USER'S_EMAIL_NOT_FOUND`;
+  //   err.details = "Email for task submission not found.";
+  //   throw err;
+  // }
   return row;
 }
 // END helper functions ================================
@@ -260,12 +260,15 @@ async function runTaskTransition({
 
     // state check
     if (task.task_state_slug !== allowedCurrentState) {
-      const err = new Error(wrongStateMessage);
-      err.status = 409;
-      err.code = "TASK_INVALID_STATE_TRANSITION";
-      err.details = `Current task state is not ${allowedCurrentState}.`;
-      throw err;
+      throw appError(409, "TASK_INVALID_STATE_TRANSITION");
     }
+    // if (task.task_state_slug !== allowedCurrentState) {
+    //   const err = new Error(wrongStateMessage);
+    //   err.status = 409;
+    //   err.code = "TASK_INVALID_STATE_TRANSITION";
+    //   err.details = `Current task state is not ${allowedCurrentState}.`;
+    //   throw err;
+    // }
 
     // extra custom validation
     if (validateTask) {
@@ -335,22 +338,24 @@ export async function takeTaskService({ task_id, actorUserId }) {
 
     validateTask: async ({ task }) => {
       // task developer check
-      if (task.developer) {
-        const err = new Error("Task is not available to be taken");
-        err.status = 409;
-        err.code = "UNABLE_TO_TAKE_TASK";
-        err.details = `Task is already taken.`;
-        throw err;
-      }
+      if (task.developer) throw appError(409, "UNABLE_TO_TAKE_TASK");
+      // if (task.developer) {
+      //   const err = new Error("Task is not available to be taken");
+      //   err.status = 409;
+      //   err.code = "UNABLE_TO_TAKE_TASK";
+      //   err.details = `Task is already taken.`;
+      //   throw err;
+      // }
 
       // task plan check
-      if (!task.plan_id) {
-        const err = new Error("Only planned tasks can be taken");
-        err.status = 409;
-        err.code = "TASK_NOT_PLANNED";
-        err.details = "Task must be assigned to a plan before it can be taken.";
-        throw err;
-      }
+      if (!task.plan_id) throw appError(409, "TASK_NOT_PLANNED");
+      // if (!task.plan_id) {
+      //   const err = new Error("Only planned tasks can be taken");
+      //   err.status = 409;
+      //   err.code = "TASK_NOT_PLANNED";
+      //   err.details = "Task must be assigned to a plan before it can be taken.";
+      //   throw err;
+      // }
     },
 
     buildUpdateFields: ({ actor, targetState, nextNote }) => ({
@@ -415,7 +420,7 @@ export async function promoteTask2DoneService({ task_id, actorUserId }) {
 
     buildNoteLine: ({ actor, targetState }) => `[ ${makeTimestamp()}, Task state: ${targetState.task_state_name} ] Developer ${actor.username} submitted the task for review.`,
 
-    successMessage: "Task submitted successfully. Email notification queued.",
+    successMessage: "Task submitted successfully. Email notification sent.",
 
     // node mailer
     afterCommit: async ({ cleanTaskId, actor, updatedTask }) => {
@@ -492,46 +497,50 @@ export async function approveTaskService({ task_id, actorUserId }) {
 function ensureTaskNoteEditable(existingTask, actorRoles = [], permitOpenRole = null) {
   const taskStateSlug = String(existingTask.task_state_slug || "").toUpperCase();
 
-  if (taskStateSlug === "CLOSED") {
-    const err = new Error("Notes cannot be updated once task is CLOSED");
-    err.status = 403;
-    err.code = "TASK_CLOSED";
-    err.details = "Note cannot be updated for tasks in CLOSED state.";
-    throw err;
-  }
+  if (taskStateSlug === "CLOSED") throw appError(403, "TASK_CLOSED");
+  // if (taskStateSlug === "CLOSED") {
+  //   const err = new Error("Notes cannot be updated once task is CLOSED");
+  //   err.status = 403;
+  //   err.code = "TASK_CLOSED";
+  //   err.details = "Note cannot be updated for tasks in CLOSED state.";
+  //   throw err;
+  // }
 
   if (taskStateSlug === "DONE") {
     const canEditDoneNote = permitOpenRole && actorRoles.includes(String(permitOpenRole).trim());
 
-    if (!canEditDoneNote) {
-      const err = new Error("Only users with the permit_Open role can update notes when the task is DONE");
-      err.status = 403;
-      err.code = "DONE_TASK_NOTE_UPDATE_FORBIDDEN";
-      err.details = "Notes for DONE tasks can only be updated by users in the permit_Open role.";
-      throw err;
-    }
+    if (!canEditDoneNote) throw appError(403, "DONE_TASK_NOTE_UPDATE_FORBIDDEN");
+    // if (!canEditDoneNote) {
+    //   const err = new Error("Only users with the permit_Open role can update notes when the task is DONE");
+    //   err.status = 403;
+    //   err.code = "DONE_TASK_NOTE_UPDATE_FORBIDDEN";
+    //   err.details = "Notes for DONE tasks can only be updated by users in the permit_Open role.";
+    //   throw err;
+    // }
   }
 }
 
 export async function updateTaskNoteService({ task_id, note, actorUserId }) {
-  if (!task_id || String(task_id).trim() === "") {
-    const err = new Error("Task id is required");
-    err.status = 400;
-    err.code = "MISSING_TASK";
-    err.details = "Task missing for update.";
-    throw err;
-  }
+  if (!task_id || String(task_id).trim() === "") throw appError(400, "MISSING_TASK");
+  // if (!task_id || String(task_id).trim() === "") {
+  //   const err = new Error("Task id is required");
+  //   err.status = 400;
+  //   err.code = "MISSING_TASK";
+  //   err.details = "Task missing for update.";
+  //   throw err;
+  // }
 
   const cleanTaskId = String(task_id).trim();
   const cleanNote = String(note ?? "").trim();
 
-  if (!cleanNote) {
-    const err = new Error("Note is required");
-    err.status = 400;
-    err.code = "MISSING_UPDATE_NOTE_INPUT";
-    err.details = "Note input missing for update.";
-    throw err;
-  }
+  if (!cleanNote) throw appError(400, "MISSING_UPDATE_NOTE_INPUT");
+  // if (!cleanNote) {
+  //   const err = new Error("Note is required");
+  //   err.status = 400;
+  //   err.code = "MISSING_UPDATE_NOTE_INPUT";
+  //   err.details = "Note input missing for update.";
+  //   throw err;
+  // }
 
   const conn = await pool.getConnection();
 
@@ -556,13 +565,14 @@ export async function updateTaskNoteService({ task_id, note, actorUserId }) {
       [cleanTaskId],
     );
 
-    if (!existingTask) {
-      const err = new Error("Task not found");
-      err.status = 404;
-      err.code = "TASK_NOT_FOUND";
-      err.details = "Task is missing from application.";
-      throw err;
-    }
+    if (!existingTask) throw appError(404, "TASK_NOT_FOUND");
+    // if (!existingTask) {
+    //   const err = new Error("Task not found");
+    //   err.status = 404;
+    //   err.code = "TASK_NOT_FOUND";
+    //   err.details = "Task is missing from application.";
+    //   throw err;
+    // }
 
     const actor = await getUserRow(conn, actorUserId);
 
@@ -644,13 +654,14 @@ export async function updateTaskNoteService({ task_id, note, actorUserId }) {
 
 // release task function
 export async function releaseTaskService({ task_id, actorUserId }) {
-  if (!task_id || String(task_id).trim() === "") {
-    const err = new Error("Task id is required");
-    err.status = 400;
-    err.code = "TASK_ID_REQUIRED";
-    err.details = "Task id is missing.";
-    throw err;
-  }
+  if (!task_id || String(task_id).trim() === "") throw appError(400, "TASK_ID_REQUIRED");
+  // if (!task_id || String(task_id).trim() === "") {
+  //   const err = new Error("Task id is required");
+  //   err.status = 400;
+  //   err.code = "TASK_ID_REQUIRED";
+  //   err.details = "Task id is missing.";
+  //   throw err;
+  // }
 
   const cleanTaskId = String(task_id).trim();
   const conn = await pool.getConnection();
@@ -678,29 +689,32 @@ export async function releaseTaskService({ task_id, actorUserId }) {
       [cleanTaskId],
     );
 
-    if (!existingTask) {
-      const err = new Error("Task not found");
-      err.status = 404;
-      err.code = "TASK_NOT_FOUND";
-      err.details = "Task is missing from application.";
-      throw err;
-    }
+    if (!existingTask) throw appError(404, "TASK_NOT_FOUND");
+    // if (!existingTask) {
+    //   const err = new Error("Task not found");
+    //   err.status = 404;
+    //   err.code = "TASK_NOT_FOUND";
+    //   err.details = "Task is missing from application.";
+    //   throw err;
+    // }
 
-    if (!existingTask.plan_id) {
-      const err = new Error("Task must be assigned to a plan before release");
-      err.status = 400;
-      err.code = "UNASSIGNED_TASK";
-      err.details = "Unassigned task cannot be release.";
-      throw err;
-    }
+    if (!existingTask.plan_id) throw appError(400, "UNASSIGNED_TASK");
+    // if (!existingTask.plan_id) {
+    //   const err = new Error("Task must be assigned to a plan before release");
+    //   err.status = 400;
+    //   err.code = "UNASSIGNED_TASK";
+    //   err.details = "Unassigned task cannot be release.";
+    //   throw err;
+    // }
 
-    if (existingTask.task_state_slug !== "OPEN") {
-      const err = new Error("Only OPEN tasks can be released");
-      err.status = 400;
-      err.code = "UNOPEN_TASK_CANNOT_BE_RELEASE";
-      err.details = "Only tasks that are in the OPEN state can be released.";
-      throw err;
-    }
+    if (existingTask.task_state_slug !== "OPEN") throw appError(400, "UNOPEN_TASK_CANNOT_BE_RELEASE");
+    // if (existingTask.task_state_slug !== "OPEN") {
+    //   const err = new Error("Only OPEN tasks can be released");
+    //   err.status = 400;
+    //   err.code = "UNOPEN_TASK_CANNOT_BE_RELEASE";
+    //   err.details = "Only tasks that are in the OPEN state can be released.";
+    //   throw err;
+    // }
 
     const [[app]] = await conn.query(
       `
@@ -718,13 +732,14 @@ export async function releaseTaskService({ task_id, actorUserId }) {
       [existingTask.app_id],
     );
 
-    if (!app) {
-      const err = new Error("Application not found");
-      err.status = 404;
-      err.code = "APPLICATION_NOT_FOUND";
-      err.details = "Application is missing.";
-      throw err;
-    }
+    if (!app) throw appError(404, "APPLICATION_NOT_FOUND");
+    // if (!app) {
+    //   const err = new Error("Application not found");
+    //   err.status = 404;
+    //   err.code = "APPLICATION_NOT_FOUND";
+    //   err.details = "Application is missing.";
+    //   throw err;
+    // }
 
     const actor = await getUserRow(conn, actorUserId);
     const todoState = await getTaskStateRow(conn, "TODO");

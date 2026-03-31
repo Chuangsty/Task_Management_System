@@ -24,7 +24,7 @@ async function testCreateTask() {
     const cookieHeader = setCookie.map((c) => c.split(";")[0]).join("; ");
     // 4) Creating response with details
     const createRes = await api.post(
-      "/api/apps/BP/CreateTask",
+      "/api/apps/NA/CreateTask",
       {
         task_name: "Fix login action",
         task_description: "Button clicking issue",

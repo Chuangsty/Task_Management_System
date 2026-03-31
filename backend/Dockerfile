@@ -1,4 +1,6 @@
-FROM node:20-alpine
+FROM node:20-alpine 
+# use lower alpine lower memory use
+# use latest service for longevity purpose
 
 WORKDIR /app
 

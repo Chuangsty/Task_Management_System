@@ -1,4 +1,5 @@
 import { pool } from "../config/db.js";
+import { appError } from "../utils/appError.js";
 
 // START OF HELPER FUNCTION ==================================================================================
 // app acronym cleaner helper
@@ -7,9 +8,11 @@ function requireCleanAppAcronym(app_acronym) {
   const cleanAcronym = String(app_acronym ?? "").trim();
   // validate acronym
   if (cleanAcronym === "") {
-    const err = new Error("App acronym is required");
-    err.status = 400;
-    throw err;
+    // const err = new Error("App acronym is required");
+    // err.status = 400;
+    // err.code = "USER_NOT_FOUND";
+    // throw err;
+    throw appError(400, "APP_ACRONYM_REQUIRED");
   }
   return cleanAcronym;
 }
@@ -26,9 +29,11 @@ async function getUserRow(conn, actorUserId) {
     [actorUserId],
   );
   if (!actor) {
-    const err = new Error("User not found");
-    err.status = 404;
-    throw err;
+    // const err = new Error("UNF");
+    // err.status = 404;
+    // err.code = "USER_NOT_FOUND";
+    // throw err;
+    throw appError(404, "USER_NOT_FOUND");
   }
   return actor;
 }
@@ -55,11 +60,11 @@ async function getAppByAcronymForUpdate(conn, cleanAcronym) {
     [cleanAcronym],
   );
   if (!app) {
-    const err = new Error("Application does not exist");
-    err.status = 404;
-    err.code = "APP_NOT_FOUND";
-    err.details = `Application with acronym "${cleanAcronym}" was not found.`;
-    throw err;
+    // const err = new Error("ANF");
+    // err.status = 404;
+    // err.code = "APP_NOT_FOUND";
+    // throw err;
+    throw appError(404, "APP_NOT_FOUND");
   }
   return app;
 }
@@ -69,9 +74,10 @@ function ensureTaskPlanEditable(existingTask) {
   const blockedStates = new Set(["DOING", "DONE", "CLOSED"]);
 
   if (blockedStates.has(String(existingTask.task_state_slug || "").toUpperCase())) {
-    const err = new Error("Plan cannot be changed once task is DOING, DONE, or CLOSED");
-    err.status = 400;
-    throw err;
+    // const err = new Error("Plan cannot be changed once task is DOING, DONE, or CLOSED");
+    // err.status = 400;
+    // throw err;
+    throw appError(409, "PLAN_CHANGE_NOT_ALLOWED");
   }
 }
 
@@ -87,9 +93,10 @@ async function getTaskStateRow(conn, slug) {
     [slug],
   );
   if (!state) {
-    const err = new Error(`Task state not found: ${slug}`);
-    err.status = 500;
-    throw err;
+    // const err = new Error(`Task state not found: ${slug}`);
+    // err.status = 500;
+    // throw err;
+    throw appError(500, "TASK_STATE_NOT_FOUND");
   }
   return state;
 }
@@ -121,9 +128,10 @@ export async function listTasksService(app_acronym) {
   );
 
   if (!app) {
-    const err = new Error("Application not found");
-    err.status = 404;
-    throw err;
+    // const err = new Error("Application not found");
+    // err.status = 404;
+    // throw err;
+    throw appError(404, "APPLICATION_NOT_FOUND");
   }
 
   // all task states from DB
@@ -189,11 +197,12 @@ export async function getTaskByStateService({ app_acronym, task_state }) {
     .toUpperCase();
 
   if (!cleanTaskState) {
-    const err = new Error("Invalid input: state is required");
-    err.status = 400;
-    err.code = "TASK_STATE_REQUIRED";
-    err.details = "The 'state' parameter must be provided.";
-    throw err;
+    // const err = new Error("Invalid input: state is required");
+    // err.status = 400;
+    // err.code = "TASK_STATE_REQUIRED";
+    // err.details = "The 'state' parameter must be provided.";
+    // throw err;
+    throw appError(400, "TASK_STATE_REQUIRED");
   }
 
   console.log("no 0");
@@ -220,11 +229,12 @@ export async function getTaskByStateService({ app_acronym, task_state }) {
   console.log("no 1");
 
   if (!app) {
-    const err = new Error("Application does not exist");
-    err.status = 404;
-    err.code = "APP_NOT_FOUND";
-    err.details = `Application with acronym "${cleanAcronym}" was not found.`;
-    throw err;
+    // const err = new Error("Application does not exist");
+    // err.status = 404;
+    // err.code = "APP_NOT_FOUND";
+    // err.details = `Application with acronym "${cleanAcronym}" was not found.`;
+    // throw err;
+    throw appError(404, "APP_NOT_FOUND");
   }
 
   const [[taskState]] = await pool.query(
@@ -241,11 +251,12 @@ export async function getTaskByStateService({ app_acronym, task_state }) {
   );
 
   if (!taskState) {
-    const err = new Error("Invalid task state");
-    err.status = 400;
-    err.code = "INVALID_TASK_STATE";
-    err.details = `Task state "${cleanTaskState}" does not exist.`;
-    throw err;
+    // const err = new Error("Invalid task state");
+    // err.status = 400;
+    // err.code = "INVALID_TASK_STATE";
+    // err.details = `Task state "${cleanTaskState}" does not exist.`;
+    // throw err;
+    throw appError(400, "INVALID_TASK_STATE");
   }
 
   const [tasks] = await pool.query(
@@ -310,11 +321,12 @@ async function getPlanByNameForTask(conn, app_id, plan_name) {
   );
 
   if (!plan) {
-    const err = new Error("Plan does not exist");
-    err.status = 404;
-    err.code = "PLAN_NOT_FOUND";
-    err.details = `Plan "${cleanPlanName}" was not found in the application.`;
-    throw err;
+    // const err = new Error("Plan does not exist");
+    // err.status = 404;
+    // err.code = "PLAN_NOT_FOUND";
+    // err.details = `Plan "${cleanPlanName}" was not found in the application.`;
+    // throw err;
+    throw appError(404, "PLAN_NOT_FOUND");
   }
 
   return plan;
@@ -326,11 +338,12 @@ export async function createTaskService({ app_acronym, task_name, task_descripti
 
   // validate task name
   if (!task_name || String(task_name).trim() === "") {
-    const err = new Error("Invalid input: task_name is required");
-    err.status = 400;
-    err.code = "INVALID_TASK_NAME";
-    err.details = "The 'task_name' field must be a non-empty string.";
-    throw err;
+    // const err = new Error("Invalid input: task_name is required");
+    // err.status = 400;
+    // err.code = "INVALID_TASK_NAME";
+    // err.details = "The 'task_name' field must be a non-empty string.";
+    // throw err;
+    throw appError(400, "INVALID_TASK_NAME");
   }
   const cleanTaskName = String(task_name).trim();
   const cleanTaskDescription = task_description == null ? null : String(task_description).trim();
@@ -345,21 +358,23 @@ export async function createTaskService({ app_acronym, task_name, task_descripti
 
     // 1) check for application owndership
     if (Number(app.project_lead) !== Number(actorUserId)) {
-      const err = new Error("Forbidden: insufficient permissions to create task in this application");
-      err.status = 403;
-      err.code = "APP_FORBIDDEN_CREATE_TASK";
-      err.details = `User ${actorUserId} is not the project lead of application "${app.app_acronym}".`;
-      throw err;
+      // const err = new Error("Forbidden: insufficient permissions to create task in this application");
+      // err.status = 403;
+      // err.code = "APP_FORBIDDEN_CREATE_TASK";
+      // err.details = `User ${actorUserId} is not the project lead of application "${app.app_acronym}".`;
+      // throw err;
+      throw appError(403, "APP_FORBIDDEN_CREATE_TASK");
     }
 
     // 2) Check task name unique per app
     const [[t]] = await conn.query("SELECT task_name FROM tasks WHERE app_id = ? AND task_name = ? LIMIT 1", [app.app_id, cleanTaskName]);
     if (t) {
-      const err = new Error("Conflict: Task name already exists in this application");
-      err.status = 409;
-      err.code = "TASK_NAME_CONFLICT";
-      err.details = `A task named "${cleanTaskName}" already exists under application ${app.app_acronym}.`;
-      throw err;
+      // const err = new Error("Conflict: Task name already exists in this application");
+      // err.status = 409;
+      // err.code = "TASK_NAME_CONFLICT";
+      // err.details = `A task named "${cleanTaskName}" already exists under application ${app.app_acronym}.`;
+      // throw err;
+      throw appError(409, "TASK_NAME_CONFLICT");
     }
 
     // 3) get default empty plan assignment
@@ -387,9 +402,10 @@ export async function createTaskService({ app_acronym, task_name, task_descripti
     );
 
     if (!taskState) {
-      const err = new Error("Task state not found");
-      err.status = 404;
-      throw err;
+      // const err = new Error("Task state not found");
+      // err.status = 404;
+      // throw err;
+      throw appError(404, "TASK_STATE_NOT_FOUND");
     }
 
     const createAtTimestamp = new Date().toLocaleString("sv-SE", { timeZone: "Asia/Singapore" });
@@ -434,36 +450,36 @@ export async function createTaskService({ app_acronym, task_name, task_descripti
       [app.app_id],
     );
 
-    // 8) fetch created task
-    const [[newTask]] = await conn.query(
-      `
-        SELECT
-            t.task_id,
-            t.app_id,
-            t.task_no,
-            t.task_name,
-            t.task_description,
-            t.task_note,
-            t.plan_id,
-            p.plan_name,
-            t.task_created_at,
-            t.task_update_at,
-            ts.task_state_name AS task_state,
-            ts.slug AS task_state_slug
-        FROM tasks t
-        JOIN task_states ts ON ts.id = t.task_state_id
-        LEFT JOIN plans p ON p.plan_id = t.plan_id
-        WHERE t.task_id = ?
-        LIMIT 1
-        `,
-      [task_id],
-    );
+    // // 8) fetch created task
+    // const [[newTask]] = await conn.query(
+    //   `
+    //     SELECT
+    //         t.task_id,
+    //         t.app_id,
+    //         t.task_no,
+    //         t.task_name,
+    //         t.task_description,
+    //         t.task_note,
+    //         t.plan_id,
+    //         p.plan_name,
+    //         t.task_created_at,
+    //         t.task_update_at,
+    //         ts.task_state_name AS task_state,
+    //         ts.slug AS task_state_slug
+    //     FROM tasks t
+    //     JOIN task_states ts ON ts.id = t.task_state_id
+    //     LEFT JOIN plans p ON p.plan_id = t.plan_id
+    //     WHERE t.task_id = ?
+    //     LIMIT 1
+    //     `,
+    //   [task_id],
+    // );
 
     await conn.commit();
 
     return {
-      message: "Task created successfully",
-      task: newTask,
+      task_id: task_id,
+      code: "200",
     };
   } catch (err) {
     await conn.rollback();
@@ -479,9 +495,10 @@ export async function updateTaskService({ app_acronym, task_id, plan_name, actor
 
   // validate task id
   if (!task_id || String(task_id).trim() === "") {
-    const err = new Error("Task id is required");
-    err.status = 400;
-    throw err;
+    // const err = new Error("Task id is required");
+    // err.status = 400;
+    // throw err;
+    throw appError(400, "TASK_ID_REQUIRED");
   }
 
   const cleanTaskId = String(task_id).trim();
@@ -519,14 +536,16 @@ export async function updateTaskService({ app_acronym, task_id, plan_name, actor
     );
     // if no existing task
     if (!existingTask) {
-      const err = new Error("Task not found");
-      err.status = 404;
-      throw err;
+      // const err = new Error("Task not found");
+      // err.status = 404;
+      // throw err;
+      throw appError(404, "TASK_NOT_FOUND");
     }
     if (Number(existingTask.creator) !== Number(actorUserId)) {
-      const err = new Error("You can only update tasks that you created");
-      err.status = 403;
-      throw err;
+      // const err = new Error("You can only update tasks that you created");
+      // err.status = 403;
+      // throw err;
+      throw appError(403, "FORBIDDEN");
     }
 
     // check for task plan change ability
@@ -623,20 +642,23 @@ export async function createPlanService({ app_acronym, plan_name, plan_startDate
   const cleanAcronym = requireCleanAppAcronym(app_acronym);
 
   if (!plan_name || String(plan_name).trim() === "") {
-    const err = new Error("Plan name is required");
-    err.status = 400;
-    throw err;
+    // const err = new Error("Plan name is required");
+    // err.status = 400;
+    // throw err;
+    throw appError(400, "PLAN_NAME_REQUIRED");
   }
 
   if (!plan_startDate || !plan_endDate) {
-    const err = new Error("Plan start date and end date are required");
-    err.status = 400;
-    throw err;
+    // const err = new Error("Plan start date and end date are required");
+    // err.status = 400;
+    // throw err;
+    throw appError(400, "PLAN_DATE_REQUIRED");
   }
   if (plan_startDate > plan_endDate) {
-    const err = new Error("Plan end date must be later than start date");
-    err.status = 400;
-    throw err;
+    // const err = new Error("Plan end date must be later than start date");
+    // err.status = 400;
+    // throw err;
+    throw appError(400, "PLAN_DATE_RANGE_INVALID");
   }
 
   const cleanPlanName = String(plan_name).trim();
@@ -655,17 +677,19 @@ export async function createPlanService({ app_acronym, plan_name, plan_startDate
     const cleanPlanStart = String(plan_startDate).slice(0, 10);
     const appStart = String(app.app_startDate).slice(0, 10);
     if (cleanPlanStart < appStart) {
-      const err = new Error(`Plan start date cannot be earlier than application start date: (${appStart})`);
-      err.status = 400;
-      throw err;
+      // const err = new Error(`Plan start date cannot be earlier than application start date: (${appStart})`);
+      // err.status = 400;
+      // throw err;
+      throw appError(400, "PLAN_DATE_RANGE_INVALID");
     }
 
     const cleanPlanEnd = String(plan_endDate).slice(0, 10);
     const appEnd = String(app.app_endDate).slice(0, 10);
     if (cleanPlanEnd > appEnd) {
-      const err = new Error(`Plan end date cannot be later than application end date: (${appEnd})`);
-      err.status = 400;
-      throw err;
+      // const err = new Error(`Plan end date cannot be later than application end date: (${appEnd})`);
+      // err.status = 400;
+      // throw err;
+      throw appError(400, "PLAN_DATE_RANGE_INVALID");
     }
 
     // 2) Prevent duplicate plan name within same app
@@ -680,9 +704,10 @@ export async function createPlanService({ app_acronym, plan_name, plan_startDate
     );
 
     if (existingPlan) {
-      const err = new Error("Plan name already exists in this application");
-      err.status = 409;
-      throw err;
+      // const err = new Error("Plan name already exists in this application");
+      // err.status = 409;
+      // throw err;
+      throw appError(409, "PLAN_NAME_CONFLICT");
     }
 
     // End of validations =============================================
