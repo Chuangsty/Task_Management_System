@@ -1,4 +1,5 @@
 import { pool } from "../config/db.js";
+import { appError } from "../utils/appError.js";
 
 function toTitleCase(str) {
   const special = ["API", "AI", "UI"];

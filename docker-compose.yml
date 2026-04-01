@@ -1,0 +1,42 @@
+services:
+  db:
+    image: mysql:8.0
+    container_name: tms-db
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: tms
+      TZ: Asia/Singapore
+    ports:
+      - "3307:3306"
+    volumes:
+      - tms_mysql_data:/var/lib/mysql
+      - ./backend/sql/schema.sql:/docker-entrypoint-initdb.d/01-schema.sql:ro
+      - ./backend/sql/seed.sql:/docker-entrypoint-initdb.d/02-seed.sql:ro
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-proot"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    env_file:
+      - ./backend/.env
+    container_name: tms-backend
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    ports:
+      - "3000:3000"
+    # volumes:
+    #   - ./backend:/app
+    #   - /app/node_modules
+    # command: sh -c "node scripts/seedAdmin.js && node src/app.js"
+    command: sh -c "node scripts/seedAdmin.js && node src/app.js"
+
+volumes:
+  tms_mysql_data:

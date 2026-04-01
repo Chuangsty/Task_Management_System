@@ -1,5 +1,6 @@
 import bcrypt from "bcryptjs";
 import { pool } from "../config/db.js";
+import { appError } from "../utils/appError.js";
 
 /*
 Pasword policy:
@@ -297,15 +298,16 @@ export async function adminUpdateUserService({ targetUserId, actorUserId, patch 
       // }
 
       // Prevent ADMIN from removing their own ADMIN role
-      if (isSelf) throw appError(400, "BAD_REQUEST");
-      // if (isSelf) {
-      //   const hasAdmin = dbRoles.some((r) => r.slug === "ADMIN");
-      //   if (!hasAdmin) {
-      //     const err = new Error("You cannot remove your own ADMIN role");
-      //     err.status = 400;
-      //     throw err;
-      //   }
-      // }
+      if (isSelf) {
+        const hasAdmin = dbRoles.some((r) => r.slug === "ADMIN");
+
+        if (!hasAdmin) throw appError(400, "BAD_REQUEST");
+        // if (!hasAdmin) {
+        //   const err = new Error("You cannot remove your own ADMIN role");
+        //   err.status = 400;
+        //   throw err;
+        // }
+      }
 
       await conn.query("DELETE FROM user_roles WHERE user_id = ?", [targetUserId]);
 

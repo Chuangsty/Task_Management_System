@@ -1,8 +1,8 @@
 import bcrypt from "bcryptjs";
-import dotenv from "dotenv";
+// import dotenv from "dotenv";
 import { pool } from "../src/config/db.js"; // MySQL connection pool
 
-dotenv.config();
+// dotenv.config();
 
 // Creating default admin credentials
 const ADMIN_USERNAME = process.env.SEED_ADMIN_USERNAME || "Me";

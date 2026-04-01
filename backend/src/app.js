@@ -1,6 +1,6 @@
 import express from "express";
 import cors from "cors"; // Cross-Origin Resource Sharing (allows frontend (different origin) to access your API)
-import dotenv from "dotenv";
+// import dotenv from "dotenv";
 import cookieParser from "cookie-parser";
 
 import authRoutes from "./routes/auth.routes.js";
@@ -13,7 +13,8 @@ import rolesRoutes from "./routes/roles.routes.js";
 
 import { errorHandler } from "./middleware/error.middleware.js";
 
-dotenv.config();
+// dotenv.config();
+// console.log("DB HOST:", process.env.DB_HOST);
 
 // This creates your server instance: start building my backend application
 const app = express();

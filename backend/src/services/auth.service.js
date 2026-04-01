@@ -11,6 +11,7 @@ Secondary functionality: Role information retrieval (not role authorization)
 import jwt from "jsonwebtoken";
 import bcrypt from "bcryptjs";
 import { pool } from "../config/db.js";
+import { appError } from "../utils/appError.js";
 
 // Login auth with email and password
 export async function loginService({ email, password }) {
