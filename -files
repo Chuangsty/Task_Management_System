@@ -1,0 +1,189 @@
+[33mcommit 01f773326dac5cae4107850cb07c4e3a479ceabb[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mmain[m[33m)[m
+Author: Chuangsty <teochuangming@gmail.com>
+Date:   Mon Apr 13 15:34:36 2026 +0800
+
+    Done
+
+ .gitignore | 5 [32m++++[m[31m-[m
+ 1 file changed, 4 insertions(+), 1 deletion(-)
+
+[33mcommit bae2f8a51c5c38ddc404d09a7227711966d3e613[m
+Author: Chuangsty <teochuangming@gmail.com>
+Date:   Mon Apr 13 15:20:34 2026 +0800
+
+    Completed push
+
+ .gitignore | 6 [32m+++[m[31m---[m
+ 1 file changed, 3 insertions(+), 3 deletions(-)
+
+[33mcommit a3fdd8d007451378a40529693c014d724c63f54c[m
+Author: Chuangsty <teochuangming@gmail.com>
+Date:   Mon Apr 13 15:18:43 2026 +0800
+
+    Completed push
+
+ devenv/dvd/transfer-bundle-manifest.tar.gz.gpg     |  Bin [31m320[m -> [32m0[m bytes
+ devenv/dvd/transfer-bundle.tar.gz.gpg              |  Bin [31m48236898[m -> [32m0[m bytes
+ devenv/home/backend-1.0.0.tgz                      |  Bin [31m1180951[m -> [32m0[m bytes
+ devenv/home/manifest.txt                           |    2 [31m-[m
+ devenv/project/Dockerfile                          |   37 [31m-[m
+ devenv/project/backend-1.0.0.tgz                   |  Bin [31m1180951[m -> [32m0[m bytes
+ devenv/project/manifest.txt                        |    1 [31m-[m
+ devenv/project/package.json                        |   30 [31m-[m
+ devenv/project/transfer-bundle-manifest.tar.gz.gpg |  Bin [31m261[m -> [32m0[m bytes
+ devenv/project/transfer-bundle.tar.gz.gpg          |  Bin [31m54236324[m -> [32m0[m bytes
+ internet-enabled/backend-1.0.0.tgz                 |  Bin [31m1180951[m -> [32m0[m bytes
+ internet-enabled/manifest.txt                      |    2 [31m-[m
+ internet-enabled/package-lock.json                 | 1607 [31m--------------------[m
+ internet-enabled/package.json                      |   30 [31m-[m
+ .../transfer-bundle-manifest.tar.gz.gpg            |  Bin [31m320[m -> [32m0[m bytes
+ internet-enabled/transfer-bundle.tar.gz.gpg        |  Bin [31m48236898[m -> [32m0[m bytes
+ uat/dvd/transfer-bundle-manifest.tar.gz.gpg        |  Bin [31m261[m -> [32m0[m bytes
+ uat/dvd/transfer-bundle.tar.gz.gpg                 |  Bin [31m54236324[m -> [32m0[m bytes
+ uat/home/manifest.txt                              |    1 [31m-[m
+ 19 files changed, 1710 deletions(-)
+
+[33mcommit 1fa6ddeb2e6f7494603027773722ca09b4ac176c[m
+Author: Chuangsty <teochuangming@gmail.com>
+Date:   Mon Apr 13 15:16:09 2026 +0800
+
+    Completed push
+
+ .gitignore | 6 [32m+++[m[31m---[m
+ 1 file changed, 3 insertions(+), 3 deletions(-)
+
+[33mcommit 5ae1637dc5ad1ecbe94812fb674707ac5653e70d[m
+Author: Chuangsty <teochuangming@gmail.com>
+Date:   Mon Apr 13 15:15:12 2026 +0800
+
+    Completed push
+
+ .gitignore | 6 [32m+++[m[31m---[m
+ 1 file changed, 3 insertions(+), 3 deletions(-)
+
+[33mcommit 62ee648263265c001af5e83a9dea851f0f59fcbd[m
+Author: Chuangsty <teochuangming@gmail.com>
+Date:   Mon Apr 13 15:12:55 2026 +0800
+
+    Completed push
+
+ .gitignore | 6 [32m+++[m[31m---[m
+ 1 file changed, 3 insertions(+), 3 deletions(-)
+
+[33mcommit 1f08d200fecc4e0e63f03b5764ba91939678dc7d[m
+Author: Chuangsty <teochuangming@gmail.com>
+Date:   Mon Apr 13 15:08:25 2026 +0800
+
+    Completed push
+
+ .gitignore                                         |   7 [32m+[m[31m-[m
+ devenv/dvd/transfer-bundle-manifest.tar.gz.gpg     | Bin [31m315[m -> [32m320[m bytes
+ devenv/dvd/transfer-bundle.tar.gz.gpg              | Bin [31m48204639[m -> [32m48236898[m bytes
+ devenv/home/backend-1.0.0.tgz                      | Bin [31m1155400[m -> [32m1180951[m bytes
+ devenv/home/baseImage.tar                          | Bin [31m138169344[m -> [32m0[m bytes
+ devenv/home/manifest.txt                           |   4 [32m+[m[31m-[m
+ devenv/project/.dockerignore                       |   7 [31m-[m
+ devenv/project/Dockerfile                          |   6 [32m+[m[31m-[m
+ devenv/project/backend-1.0.0.tgz                   | Bin [31m1155400[m -> [32m1180951[m bytes
+ devenv/project/backend-eval.tar                    | Bin [31m157519872[m -> [32m0[m bytes
+ devenv/project/manifest.txt                        |   2 [32m+[m[31m-[m
+ devenv/project/scripts/seedAdmin.js                |  93 [31m---[m
+ devenv/project/sql/schema.sql                      | 189 [31m-----[m
+ devenv/project/sql/seed.sql                        |  34 [31m-[m
+ devenv/project/src/app.js                          |  52 [31m--[m
+ devenv/project/src/config/db.js                    |  15 [31m-[m
+ devenv/project/src/controllers/admin.controller.js |  44 [31m--[m
+ .../project/src/controllers/appDash.controller.js  |  33 [31m-[m
+ devenv/project/src/controllers/auth.controller.js  |  54 [31m--[m
+ devenv/project/src/controllers/roles.controller.js |  19 [31m-[m
+ .../project/src/controllers/taskDash.controller.js |  98 [31m---[m
+ .../project/src/controllers/workflow.controller.js |  87 [31m---[m
+ devenv/project/src/middleware/auth.middleware.js   | 106 [31m---[m
+ devenv/project/src/middleware/error.middleware.js  | 113 [31m---[m
+ devenv/project/src/middleware/permit.middleware.js |  95 [31m---[m
+ devenv/project/src/middleware/role.middleware.js   |  22 [31m-[m
+ devenv/project/src/routes/admin.routes.js          |  18 [31m-[m
+ devenv/project/src/routes/appDash.routes.js        |  17 [31m-[m
+ devenv/project/src/routes/auth.routes.js           |  16 [31m-[m
+ devenv/project/src/routes/roles.routes.js          |   8 [31m-[m
+ devenv/project/src/routes/taskDash.routes.js       |  24 [31m-[m
+ devenv/project/src/routes/workflow.routes.js       |  29 [31m-[m
+ devenv/project/src/services/admin.service.js       | 366 [31m----------[m
+ devenv/project/src/services/appDash.service.js     | 325 [31m---------[m
+ devenv/project/src/services/auth.service.js        | 150 [31m----[m
+ devenv/project/src/services/taskDash.service.js    | 803 [31m--------------------[m
+ devenv/project/src/services/workflow.service.js    | 809 [31m---------------------[m
+ devenv/project/src/utils/appError.js               |   6 [31m-[m
+ devenv/project/src/utils/mailer.js                 |  33 [31m-[m
+ devenv/project/transfer-bundle-manifest.tar.gz.gpg | Bin [31m263[m -> [32m261[m bytes
+ devenv/project/transfer-bundle.tar.gz.gpg          | Bin [31m54156299[m -> [32m54236324[m bytes
+ internet-enabled/backend-1.0.0.tgz                 | Bin [31m1155400[m -> [32m1180951[m bytes
+ internet-enabled/baseImage.tar                     | Bin [31m138169344[m -> [32m0[m bytes
+ internet-enabled/manifest.txt                      |   4 [32m+[m[31m-[m
+ internet-enabled/package-lock.json                 |  41 [32m+[m[31m-[m
+ .../transfer-bundle-manifest.tar.gz.gpg            | Bin [31m315[m -> [32m320[m bytes
+ internet-enabled/transfer-bundle.tar.gz.gpg        | Bin [31m48204639[m -> [32m48236898[m bytes
+ uat/dvd/transfer-bundle-manifest.tar.gz.gpg        | Bin [31m263[m -> [32m261[m bytes
+ uat/dvd/transfer-bundle.tar.gz.gpg                 | Bin [31m54156299[m -> [32m54236324[m bytes
+ uat/home/backend-eval.tar                          | Bin [31m157519872[m -> [32m0[m bytes
+ uat/home/manifest.txt                              |   2 [32m+[m[31m-[m
+ 51 files changed, 42 insertions(+), 3689 deletions(-)
+
+[33mcommit 8c65a4654d00e4a084e7598ac5cfafe73fd67fa0[m
+Author: Chuangsty <teochuangming@gmail.com>
+Date:   Fri Apr 10 16:20:04 2026 +0800
+
+    Sprint 4: docker implementation
+
+ backend/Dockerfile                                 |   15 [32m+[m[31m-[m
+ devenv/dvd/transfer-bundle-manifest.tar.gz.gpg     |  Bin [31m0[m -> [32m315[m bytes
+ devenv/dvd/transfer-bundle.tar.gz.gpg              |  Bin [31m0[m -> [32m48204639[m bytes
+ devenv/home/backend-1.0.0.tgz                      |  Bin [31m0[m -> [32m1155400[m bytes
+ devenv/home/baseImage.tar                          |  Bin [31m0[m -> [32m138169344[m bytes
+ devenv/home/manifest.txt                           |    2 [32m+[m
+ devenv/project/.dockerignore                       |    7 [32m+[m
+ devenv/project/Dockerfile                          |   39 [32m+[m
+ devenv/project/backend-1.0.0.tgz                   |  Bin [31m0[m -> [32m1155400[m bytes
+ devenv/project/backend-eval.tar                    |  Bin [31m0[m -> [32m157519872[m bytes
+ devenv/project/manifest.txt                        |    1 [32m+[m
+ devenv/project/package.json                        |   30 [32m+[m
+ devenv/project/scripts/seedAdmin.js                |   93 [32m++[m
+ devenv/project/sql/schema.sql                      |  189 [32m+++[m
+ devenv/project/sql/seed.sql                        |   34 [32m+[m
+ devenv/project/src/app.js                          |   52 [32m+[m
+ devenv/project/src/config/db.js                    |   15 [32m+[m
+ devenv/project/src/controllers/admin.controller.js |   44 [32m+[m
+ .../project/src/controllers/appDash.controller.js  |   33 [32m+[m
+ devenv/project/src/controllers/auth.controller.js  |   54 [32m+[m
+ devenv/project/src/controllers/roles.controller.js |   19 [32m+[m
+ .../project/src/controllers/taskDash.controller.js |   98 [32m++[m
+ .../project/src/controllers/workflow.controller.js |   87 [32m++[m
+ devenv/project/src/middleware/auth.middleware.js   |  106 [32m++[m
+ devenv/project/src/middleware/error.middleware.js  |  113 [32m++[m
+ devenv/project/src/middleware/permit.middleware.js |   95 [32m++[m
+ devenv/project/src/middleware/role.middleware.js   |   22 [32m+[m
+ devenv/project/src/routes/admin.routes.js          |   18 [32m+[m
+ devenv/project/src/routes/appDash.routes.js        |   17 [32m+[m
+ devenv/project/src/routes/auth.routes.js           |   16 [32m+[m
+ devenv/project/src/routes/roles.routes.js          |    8 [32m+[m
+ devenv/project/src/routes/taskDash.routes.js       |   24 [32m+[m
+ devenv/project/src/routes/workflow.routes.js       |   29 [32m+[m
+ devenv/project/src/services/admin.service.js       |  366 [32m+++++[m
+ devenv/project/src/services/appDash.service.js     |  325 [32m++++[m
+ devenv/project/src/services/auth.service.js        |  150 [32m++[m
+ devenv/project/src/services/taskDash.service.js    |  803 [32m++++++++++[m
+ devenv/project/src/services/workflow.service.js    |  809 [32m++++++++++[m
+ devenv/project/src/utils/appError.js               |    6 [32m+[m
+ devenv/project/src/utils/mailer.js                 |   33 [32m+[m
+ devenv/project/transfer-bundle-manifest.tar.gz.gpg |    2 [32m+[m
+ devenv/project/transfer-bundle.tar.gz.gpg          |  Bin [31m0[m -> [32m54156299[m bytes
+ internet-enabled/backend-1.0.0.tgz                 |  Bin [31m0[m -> [32m1155400[m bytes
+ internet-enabled/baseImage.tar                     |  Bin [31m0[m -> [32m138169344[m bytes
+ internet-enabled/manifest.txt                      |    2 [32m+[m
+ internet-enabled/package-lock.json                 | 1592 [32m++++++++++++++++++++[m
+ internet-enabled/package.json                      |   30 [32m+[m
+ .../transfer-bundle-manifest.tar.gz.gpg            |  Bin [31m0[m -> [32m315[m bytes
+ internet-enabled/transfer-bundle.tar.gz.gpg        |  Bin [31m0[m -> [32m48204639[m bytes
+ uat/dvd/transfer-bundle-manifest.tar.gz.gpg        |    2 [32m+[m
+ uat/dvd/transfer-bundle.tar.gz.gpg                 |  Bin [31m0[m -> [32m54156299[m bytes
+ uat/home/backend-eval.tar         

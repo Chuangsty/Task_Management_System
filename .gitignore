@@ -6,7 +6,7 @@ yarn-debug.log*
 pnpm-debug.log*
 
 # Node modules (both frontend & backend)
-node_modules
+node_modules/
 
 # Build outputs
 dist
@@ -23,3 +23,11 @@ dist-ssr
 
 # Misc
 *.local
+
+# Docker
+/devenv/
+/uat/
+/internet-enabled/
+*.tar
+*.tgz
+*.gpg

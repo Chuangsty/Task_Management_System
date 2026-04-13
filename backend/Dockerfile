@@ -16,20 +16,18 @@ RUN npm ci --omit=dev
 
 COPY . .
 
-# RUN addgroup -S appgroup && adduser -S -D -H appuser -G appgroup
+RUN addgroup -S appgroup && adduser -S -H -D -u 4000 -G appgroup appuser
 # addgroup -S appgroup
     # creates a system group called appgroup
-# adduser -S -D -H appuser -G appgroup
-    # creates a system user called appuser
+# adduser -S -H -D -u 4000 -G appgroup appuser
+    # add user called appuser
     # -S = system user (no login, lightweight)
-    # -D = no password
     # -H = no home directory (purely for user to exist to run the app)
+    # -D = no password
+    # -u 4000 = user ID ~> 4000
     # -G appgroup = assign user to that group
-#
-RUN addgroup -S appgroup && adduser -S -H -D -u 4000 -G appgroup appuser
-# -u 4000 = user ID ~> 4000
+# 
 
-# RUN chown -R appuser:appgroup /app && adduser -S -H -D -u 4000 -G appgroup appuser
 RUN chown -R appuser:appgroup /app && chmod -R 755 /app
 # chown -R appuser:appgroup /app
     # chown = change owner
@@ -41,6 +39,7 @@ RUN chown -R appuser:appgroup /app && chmod -R 755 /app
         # owner, permission: read, write, execute
         # group, permission: read, execute
         # others, permission: read, execute
+# 
 
 USER appuser
 
